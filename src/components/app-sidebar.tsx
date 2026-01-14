@@ -9,6 +9,8 @@ import {
   UserCheck,
   Building2,
   Activity,
+  Ticket,
+  Bell,
 } from "lucide-react";
 
 import {
@@ -55,6 +57,16 @@ const items = [
     title: "Attendance Report",
     url: "/attendance-report",
     icon: Activity,
+  },
+  {
+    title: "Tickets",
+    url: "/tickets",
+    icon: Ticket,
+  },
+  {
+    title: "Notifications",
+    url: "/notifications",
+    icon: Bell,
   },
   {
     title: "Settings",
