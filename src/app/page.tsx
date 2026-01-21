@@ -22,6 +22,7 @@ export default function DashboardPage() {
     readings: [],
     logs: [],
     pmInstances: [],
+    errorTrends: [],
   });
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function DashboardPage() {
           pmRes,
           readingsRes,
           logsRes,
+          trendsRes,
         ] = await Promise.all([
           apiFetch("/api/users"),
           apiFetch("/api/sites"),
@@ -44,9 +46,10 @@ export default function DashboardPage() {
           apiFetch("/api/pm-instances"),
           apiFetch("/api/chiller-readings"),
           apiFetch("/api/logs?limit=10"),
+          apiFetch("/api/logs/trends"),
         ]);
 
-        const [u, s, a, t, pm, r, l] = await Promise.all([
+        const [u, s, a, t, pm, r, l, tr] = await Promise.all([
           safeJsonParse(usersRes),
           safeJsonParse(sitesRes),
           safeJsonParse(assetsRes),
@@ -54,6 +57,7 @@ export default function DashboardPage() {
           safeJsonParse(pmRes),
           safeJsonParse(readingsRes),
           safeJsonParse(logsRes),
+          safeJsonParse(trendsRes),
         ]);
 
         setData({
@@ -64,6 +68,7 @@ export default function DashboardPage() {
           pmInstances: pm.data || [],
           readings: r.data || [],
           logs: l.data || [],
+          errorTrends: tr.data || [],
         });
       } catch (error) {
         console.error("Dashboard fetch error", error);
@@ -161,7 +166,7 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7 h-auto">
         {/* Charts Section - Takes up 5 columns on large screens */}
         <div className="col-span-full lg:col-span-5 space-y-6">
-          <ChartsSection loading={loading} />
+          <ChartsSection loading={loading} errorTrends={data.errorTrends} />
         </div>
 
         {/* Recent Activity - Takes up 2 columns on large screens */}

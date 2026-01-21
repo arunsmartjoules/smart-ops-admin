@@ -18,6 +18,7 @@ import {
 
 interface ChartsSectionProps {
   loading?: boolean;
+  errorTrends?: any[];
 }
 
 // Mock Data
@@ -46,10 +47,14 @@ const alertDistribution = [
   { name: "Info", value: 25, color: "#3b82f6" },
 ];
 
-export function ChartsSection({ loading }: ChartsSectionProps) {
+export function ChartsSection({
+  loading,
+  errorTrends = [],
+}: ChartsSectionProps) {
   if (loading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="col-span-full h-[400px] bg-zinc-100 rounded-xl animate-pulse mb-2" />
         <div className="col-span-4 h-[350px] bg-zinc-100 rounded-xl animate-pulse" />
         <div className="col-span-3 h-[350px] bg-zinc-100 rounded-xl animate-pulse" />
       </div>
@@ -58,6 +63,100 @@ export function ChartsSection({ loading }: ChartsSectionProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      {/* System Error Trend Chart */}
+      <Card className="col-span-full border-zinc-100/80 bg-white shadow-sm overflow-hidden group">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-lg font-bold text-zinc-900">
+              System Error Dynamics
+            </CardTitle>
+            <p className="text-xs text-zinc-500 mt-1">
+              Day-wise distribution of non-critical and critical system errors
+              across all modules.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 rounded-full border border-red-100">
+              <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+              <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider">
+                Live tracking
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pl-2 pb-6">
+          <div className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={errorTrends}>
+                <defs>
+                  <linearGradient
+                    id="errorGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8} />
+                    <stop offset="100%" stopColor="#991b1b" stopOpacity={0.9} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f4f4f5"
+                />
+                <XAxis
+                  dataKey="date"
+                  stroke="#71717a"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(val) => {
+                    const date = new Date(val);
+                    return date.toLocaleDateString("en-US", {
+                      day: "numeric",
+                      month: "short",
+                    });
+                  }}
+                />
+                <YAxis
+                  stroke="#71717a"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  cursor={{ fill: "#f4f4f5" }}
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    borderRadius: "12px",
+                    border: "1px solid #e4e4e7",
+                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                    padding: "12px",
+                  }}
+                  itemStyle={{ fontSize: "12px", fontWeight: "bold" }}
+                  labelStyle={{
+                    fontSize: "10px",
+                    color: "#71717a",
+                    marginBottom: "4px",
+                    textTransform: "uppercase",
+                    fontWeight: "black",
+                  }}
+                />
+                <Bar
+                  dataKey="errors"
+                  fill="url(#errorGradient)"
+                  radius={[6, 6, 0, 0]}
+                  barSize={40}
+                  name="System Errors"
+                  animationDuration={1500}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
       {/* Main Ticket Trend Chart */}
       <Card className="col-span-4 border-zinc-100/80 bg-white shadow-sm">
         <CardHeader>
