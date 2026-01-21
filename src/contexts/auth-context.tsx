@@ -9,6 +9,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  organization_id?: string;
   is_superadmin: boolean;
 }
 

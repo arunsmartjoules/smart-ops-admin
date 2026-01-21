@@ -33,7 +33,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Save,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { apiFetch, safeJsonParse } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -79,6 +82,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const STATUS_VARIANTS: Record<string, string> = {
   Open: "bg-blue-100 text-blue-700 border-blue-200",
@@ -89,6 +100,56 @@ const STATUS_VARIANTS: Record<string, string> = {
   Cancelled: "bg-red-100 text-red-700 border-red-200",
 };
 
+const ALL_COLUMNS = [
+  { key: "ticket_no", label: "Ticket #" },
+  { key: "ticket_id", label: "Ticket ID" },
+  { key: "title", label: "Title" },
+  { key: "status", label: "Status" },
+  { key: "category", label: "Category" },
+  { key: "site_id", label: "Site" },
+  { key: "location", label: "Location" },
+  { key: "area_asset", label: "Area/Asset" },
+  { key: "assigned_to", label: "Assigned To" },
+  { key: "contact_name", label: "Contact Name" },
+  { key: "contact_number", label: "Contact Phone" },
+  { key: "current_temperature", label: "Temp (°C)" },
+  { key: "current_rh", label: "RH (%)" },
+  { key: "standard_temperature", label: "Std Temp" },
+  { key: "standard_rh", label: "Std RH" },
+  { key: "created_user", label: "Created By" },
+  { key: "message_id", label: "Message ID" },
+  { key: "sender_id", label: "Sender ID" },
+  { key: "spare_type", label: "Spare Type" },
+  { key: "spare_quantity", label: "Spare Qty" },
+  { key: "escalation_source", label: "Escalation" },
+  { key: "sub_ticket_id", label: "Sub Ticket" },
+  { key: "start_datetime", label: "Start Date" },
+  { key: "end_datetime", label: "End Date" },
+  { key: "responded_at", label: "Responded" },
+  { key: "resolved_at", label: "Resolved" },
+  { key: "flag_incident", label: "Incident?" },
+  { key: "reason", label: "Reason" },
+  { key: "support_users", label: "Support Users" },
+  { key: "group_id", label: "Group ID" },
+  { key: "support_users_name", label: "Support Names" },
+  { key: "internal_remarks", label: "Internal Remarks" },
+  { key: "customer_inputs", label: "Customer Input" },
+  { key: "notes", label: "Notes" },
+  { key: "attachments", label: "Attachments" },
+  { key: "created_at", label: "Created At" },
+  { key: "updated_at", label: "Updated At" },
+];
+
+const DEFAULT_VISIBLE = new Set([
+  "ticket_no",
+  "title",
+  "status",
+  "category",
+  "assigned_to",
+  "area_asset",
+  "created_at",
+]);
+
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [sites, setSites] = useState<any[]>([]);
@@ -97,14 +158,33 @@ export default function TicketsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importOpen, setImportOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditLoading, setBulkEditLoading] = useState(false);
+  const [bulkEditData, setBulkEditData] = useState({
+    status: "",
+    assigned_to: "",
+    internal_remarks: "",
+  });
+  const [visibleColumns, setVisibleColumns] =
+    useState<Set<string>>(DEFAULT_VISIBLE);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleColumn = (key: string) => {
+    const next = new Set(visibleColumns);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    setVisibleColumns(next);
+  };
 
   // Filters
   const [siteId, setSiteId] = useState("all");
   const [status, setStatus] = useState("all");
   const [category, setCategory] = useState("all");
   const [dateFrom, setDateFrom] = useState<Date>(
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
   );
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [searchTerm, setSearchTerm] = useState("");
@@ -143,7 +223,7 @@ export default function TicketsPage() {
       });
 
       const res = await apiFetch(
-        `/api/complaints/site/${siteId}?${params.toString()}`
+        `/api/complaints/site/${siteId}?${params.toString()}`,
       );
       const result = await safeJsonParse(res);
 
@@ -165,74 +245,20 @@ export default function TicketsPage() {
   const exportToCSV = () => {
     if (tickets.length === 0) return;
 
-    const headers = [
-      "Ticket No",
-      "Title",
-      "Status",
-      "Category",
-      "Site",
-      "Location",
-      "Area/Asset",
-      "Created At",
-      "Updated At",
-      "Resolved At",
-      "Closed At",
-      "Assigned To",
-      "Created By",
-      "Contact Name",
-      "Contact Number",
-      "Current Temp",
-      "Current RH",
-      "Standard Temp",
-      "Standard RH",
-      "Spare Type",
-      "Spare Qty",
-      "Internal Remarks",
-      "Customer Inputs",
-      "Notes",
-      "Escalation Source",
-      "Support Users",
-    ];
-
+    const headers = ALL_COLUMNS.map((c) => c.label);
     const csvContent = [
       headers.join(","),
       ...tickets.map((t) =>
-        [
-          t.ticket_no,
-          t.title,
-          t.status,
-          t.category,
-          t.site_id,
-          t.location,
-          t.area_asset,
-          t.created_at
-            ? format(new Date(t.created_at), "yyyy-MM-dd HH:mm")
-            : "",
-          t.updated_at
-            ? format(new Date(t.updated_at), "yyyy-MM-dd HH:mm")
-            : "",
-          t.resolved_at
-            ? format(new Date(t.resolved_at), "yyyy-MM-dd HH:mm")
-            : "",
-          t.closed_at ? format(new Date(t.closed_at), "yyyy-MM-dd HH:mm") : "",
-          t.assigned_to,
-          t.created_user,
-          t.contact_name,
-          t.contact_number,
-          t.current_temperature,
-          t.current_rh,
-          t.standard_temperature,
-          t.standard_rh,
-          t.spare_type,
-          t.spare_quantity,
-          t.internal_remarks,
-          t.customer_inputs,
-          t.notes,
-          t.escalation_source,
-          t.support_users_name,
-        ]
-          .map((v) => `"${(v || "").toString().replace(/"/g, '""')}"`)
-          .join(",")
+        ALL_COLUMNS.map((col) => {
+          const val = t[col.key];
+          if (val === null || val === undefined) return "";
+          if (col.key.includes("date") || col.key.includes("_at")) {
+            return format(new Date(val), "yyyy-MM-dd HH:mm");
+          }
+          return val.toString();
+        })
+          .map((v) => `"${v.replace(/"/g, '""')}"`)
+          .join(","),
       ),
     ].join("\n");
 
@@ -242,7 +268,7 @@ export default function TicketsPage() {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `tickets_report_${format(new Date(), "yyyy-MM-dd")}.csv`
+      `tickets_full_report_${format(new Date(), "yyyy-MM-dd")}.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
@@ -257,7 +283,7 @@ export default function TicketsPage() {
       t.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.site_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.assigned_to?.toLowerCase().includes(searchTerm.toLowerCase())
+      t.assigned_to?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // Pagination calculations
@@ -284,7 +310,7 @@ export default function TicketsPage() {
 
   const selectAll = () => {
     setSelectedIds(
-      new Set(paginatedTickets.map((t) => t.ticket_id || t.ticket_no))
+      new Set(paginatedTickets.map((t) => t.ticket_id || t.ticket_no)),
     );
   };
 
@@ -303,7 +329,7 @@ export default function TicketsPage() {
       setLoading(true);
       // DELETE requests for selected tickets
       const deletePromises = Array.from(selectedIds).map((id) =>
-        apiFetch(`/api/complaints/${id}`, { method: "DELETE" })
+        apiFetch(`/api/complaints/${id}`, { method: "DELETE" }),
       );
 
       await Promise.all(deletePromises);
@@ -319,11 +345,44 @@ export default function TicketsPage() {
     }
   };
 
+  const handleBulkEditAction = async () => {
+    try {
+      setBulkEditLoading(true);
+
+      const payload: any = {};
+      if (bulkEditData.status) payload.status = bulkEditData.status;
+      if (bulkEditData.assigned_to)
+        payload.assigned_to = bulkEditData.assigned_to;
+      if (bulkEditData.internal_remarks)
+        payload.internal_remarks = bulkEditData.internal_remarks;
+
+      if (Object.keys(payload).length === 0) {
+        setBulkEditOpen(false);
+        return;
+      }
+
+      const updatePromises = Array.from(selectedIds).map((id) =>
+        apiFetch(`/api/complaints/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }),
+      );
+
+      await Promise.all(updatePromises);
+      await fetchTickets();
+      clearSelection();
+      setBulkEditOpen(false);
+      setBulkEditData({ status: "", assigned_to: "", internal_remarks: "" });
+    } catch (error) {
+      console.error("Failed to bulk edit tickets", error);
+      alert("Failed to update tickets");
+    } finally {
+      setBulkEditLoading(false);
+    }
+  };
+
   const handleBulkEdit = () => {
-    // Placeholder for bulk edit - would open a modal with common fields
-    alert(
-      `Bulk edit for ${selectedIds.size} tickets - Feature to be implemented`
-    );
+    setBulkEditOpen(true);
   };
 
   const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -355,7 +414,7 @@ export default function TicketsPage() {
       // TODO: Send to backend
       console.log("Parsed tickets:", newTickets);
       alert(
-        `Parsed ${newTickets.length} tickets. Backend integration pending.`
+        `Parsed ${newTickets.length} tickets. Backend integration pending.`,
       );
       setImportOpen(false);
       if (fileInputRef.current) {
@@ -366,7 +425,7 @@ export default function TicketsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className="flex flex-col h-full space-y-4 p-4 sm:p-6 pb-2">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 flex items-center gap-3">
@@ -388,8 +447,8 @@ export default function TicketsPage() {
                 <Filter className="mr-2 h-4 w-4" /> Filters
               </Button>
             </SheetTrigger>
-            <SheetContent className="w-[400px] sm:w-[540px]">
-              <SheetHeader>
+            <SheetContent className="w-[400px] sm:w-[540px] p-0 flex flex-col">
+              <SheetHeader className="p-6 border-b">
                 <SheetTitle className="flex items-center gap-2">
                   <Filter className="h-5 w-5" />
                   Filter Tickets
@@ -398,7 +457,7 @@ export default function TicketsPage() {
                   Apply filters to narrow down your ticket search
                 </SheetDescription>
               </SheetHeader>
-              <div className="mt-8 space-y-6">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
                     <Building2 size={12} /> Site
@@ -469,7 +528,7 @@ export default function TicketsPage() {
                         variant={"outline"}
                         className={cn(
                           "w-full justify-start text-left font-normal bg-white border-zinc-200",
-                          !dateFrom && "text-muted-foreground"
+                          !dateFrom && "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -501,7 +560,7 @@ export default function TicketsPage() {
                         variant={"outline"}
                         className={cn(
                           "w-full justify-start text-left font-normal bg-white border-zinc-200",
-                          !dateTo && "text-muted-foreground"
+                          !dateTo && "text-muted-foreground",
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -557,6 +616,30 @@ export default function TicketsPage() {
           >
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="border-zinc-300 hover:bg-zinc-100 font-medium"
+              >
+                <Eye className="mr-2 h-4 w-4" /> Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 max-h-[80vh] overflow-y-auto z-100">
+              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {ALL_COLUMNS.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col.key}
+                  checked={visibleColumns.has(col.key)}
+                  onCheckedChange={() => toggleColumn(col.key)}
+                >
+                  {col.label}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -607,12 +690,12 @@ export default function TicketsPage() {
       </div>
 
       {/* Main Table */}
-      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
           <Table>
             <TableHeader className="bg-zinc-50/80 backdrop-blur-sm sticky top-0 z-10 border-b border-zinc-200">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[50px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
+                <TableHead className="w-[50px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest bg-zinc-50 sticky left-0 z-20 border-r">
                   <Checkbox
                     checked={isAllSelected}
                     onCheckedChange={(checked) => {
@@ -624,35 +707,18 @@ export default function TicketsPage() {
                     }}
                   />
                 </TableHead>
-                <TableHead className="w-[100px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Ticket
-                </TableHead>
-                <TableHead className="min-w-[200px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Title / Site
-                </TableHead>
-                <TableHead className="w-[110px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Status
-                </TableHead>
-                <TableHead className="w-[100px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Category
-                </TableHead>
-                <TableHead className="w-[140px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Area/Asset
-                </TableHead>
-                <TableHead className="w-[140px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Assigned To
-                </TableHead>
-                <TableHead className="w-[140px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Contact
-                </TableHead>
-                <TableHead className="w-[100px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Temp/RH
-                </TableHead>
-                <TableHead className="w-[140px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest">
-                  Created
-                </TableHead>
-                <TableHead className="w-[60px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest text-center">
-                  View
+                {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map(
+                  (col) => (
+                    <TableHead
+                      key={col.key}
+                      className="font-bold text-zinc-900 uppercase text-[10px] tracking-widest whitespace-nowrap px-4"
+                    >
+                      {col.label}
+                    </TableHead>
+                  ),
+                )}
+                <TableHead className="w-[80px] font-bold text-zinc-900 uppercase text-[10px] tracking-widest text-center sticky right-0 bg-zinc-50 z-20 border-l">
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -679,118 +745,99 @@ export default function TicketsPage() {
                     key={
                       ticket.ticket_id || ticket.ticket_no || `ticket-${index}`
                     }
-                    className="hover:bg-zinc-50/50 transition-colors group border-b border-zinc-100"
+                    className={cn(
+                      "hover:bg-zinc-50/50 transition-colors group border-b border-zinc-100",
+                      selectedIds.has(ticket.ticket_id || ticket.ticket_no) &&
+                        "bg-red-50/30",
+                    )}
                   >
-                    <TableCell>
+                    <TableCell className="sticky left-0 bg-white group-hover:bg-zinc-50 z-10 border-r text-center px-4">
                       <Checkbox
                         checked={selectedIds.has(
-                          ticket.ticket_id || ticket.ticket_no
+                          ticket.ticket_id || ticket.ticket_no,
                         )}
                         onCheckedChange={() =>
                           toggleSelection(ticket.ticket_id || ticket.ticket_no)
                         }
                       />
                     </TableCell>
-                    <TableCell className="font-mono font-bold text-red-600 text-[11px] tracking-tighter">
-                      #{ticket.ticket_no || ticket.ticket_id?.slice(0, 8)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col max-w-[280px]">
-                        <span className="font-bold text-zinc-900 text-sm line-clamp-1 group-hover:text-red-600 transition-colors">
-                          {ticket.title}
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <MapPin size={10} className="text-zinc-400" />
-                          <span className="text-[10px] font-bold text-zinc-500 uppercase">
-                            {ticket.site_id}
-                          </span>
-                          <span className="text-zinc-300">•</span>
-                          <span className="text-[10px] text-zinc-400 font-medium truncate">
-                            {ticket.location}
-                          </span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={`text-[9px] px-2 py-0.5 h-5 font-bold uppercase tracking-wider rounded-md border ${
-                          STATUS_VARIANTS[ticket.status] ||
-                          "bg-zinc-100 text-zinc-600 border-zinc-200"
-                        }`}
-                      >
-                        {ticket.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded">
-                        {ticket.category}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-zinc-600 text-[11px] font-semibold">
-                      {ticket.area_asset || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <User size={12} className="text-zinc-400" />
-                        <span className="text-xs text-zinc-700 font-medium truncate">
-                          {ticket.assigned_to || "Unassigned"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {ticket.contact_name ? (
-                        <div className="flex flex-col">
-                          <span className="text-xs font-semibold text-zinc-700 truncate">
-                            {ticket.contact_name}
-                          </span>
-                          <div className="flex items-center gap-1 text-[10px] text-zinc-400">
-                            <Phone size={9} />
-                            {ticket.contact_number}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-zinc-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {ticket.current_temperature || ticket.current_rh ? (
-                        <div className="flex flex-col text-[10px]">
-                          <div className="flex items-center gap-1 text-zinc-700">
-                            <Thermometer size={10} className="text-red-500" />
-                            <span className="font-semibold">
-                              {ticket.current_temperature}°C
+                    {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map(
+                      (col) => (
+                        <TableCell key={col.key} className="px-4 py-3">
+                          {col.key === "status" ? (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider rounded-md border",
+                                STATUS_VARIANTS[ticket.status] ||
+                                  "bg-zinc-100 text-zinc-600 border-zinc-200",
+                              )}
+                            >
+                              {ticket.status}
+                            </Badge>
+                          ) : col.key === "ticket_no" ? (
+                            <span className="font-mono font-bold text-red-600 text-[11px] tracking-tighter whitespace-nowrap">
+                              #{ticket.ticket_no || ticket.id?.slice(0, 8)}
                             </span>
-                          </div>
-                          {ticket.current_rh && (
-                            <span className="text-zinc-400">
-                              RH: {ticket.current_rh}%
+                          ) : col.key === "title" ? (
+                            <div className="flex flex-col max-w-[250px]">
+                              <span className="font-bold text-zinc-900 text-sm line-clamp-1 group-hover:text-red-600 transition-colors">
+                                {ticket.title}
+                              </span>
+                              {visibleColumns.has("site_id") === false && (
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase">
+                                  {ticket.site_id}
+                                </span>
+                              )}
+                            </div>
+                          ) : col.key === "category" ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] font-bold uppercase px-2 bg-zinc-100 text-zinc-500 border-none"
+                            >
+                              {ticket.category}
+                            </Badge>
+                          ) : col.key === "assigned_to" ? (
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                              <User size={12} className="text-zinc-400" />
+                              <span className="text-xs text-zinc-700 font-medium">
+                                {ticket.assigned_to || "Unassigned"}
+                              </span>
+                            </div>
+                          ) : col.key.includes("date") ||
+                            col.key.includes("_at") ||
+                            col.key.includes("datetime") ||
+                            col.key === "responded_at" ||
+                            col.key === "resolved_at" ? (
+                            <span className="text-[11px] text-zinc-500 font-medium whitespace-nowrap">
+                              {ticket[col.key]
+                                ? format(
+                                    new Date(ticket[col.key]),
+                                    "MMM dd, HH:mm",
+                                  )
+                                : "-"}
+                            </span>
+                          ) : col.key === "current_temperature" ||
+                            col.key === "current_rh" ||
+                            col.key === "standard_temperature" ||
+                            col.key === "standard_rh" ? (
+                            <span className="text-xs font-bold text-zinc-700 whitespace-nowrap">
+                              {ticket[col.key] !== null &&
+                              ticket[col.key] !== undefined
+                                ? `${ticket[col.key]}${
+                                    col.key.includes("temp") ? "°C" : "%"
+                                  }`
+                                : "-"}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-zinc-600 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] block">
+                              {ticket[col.key]?.toString() || "-"}
                             </span>
                           )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-zinc-400">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-zinc-700">
-                          {ticket.created_at
-                            ? format(
-                                new Date(ticket.created_at),
-                                "MMM dd, yyyy"
-                              )
-                            : "-"}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 flex items-center gap-1">
-                          <Clock size={10} />
-                          {ticket.created_at
-                            ? format(new Date(ticket.created_at), "HH:mm")
-                            : "-"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
+                        </TableCell>
+                      ),
+                    )}
+                    <TableCell className="text-center sticky right-0 bg-white group-hover:bg-zinc-50 z-10 border-l shadow-[-10px_0_15px_rgba(0,0,0,0.02)] px-4">
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
@@ -801,8 +848,8 @@ export default function TicketsPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto border-none shadow-2xl p-0 overflow-hidden rounded-2xl">
-                          <DialogHeader className="p-6 bg-zinc-900 text-white sticky top-0 z-10">
+                        <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden rounded-2xl flex flex-col max-h-[90vh]">
+                          <DialogHeader className="p-6 bg-zinc-900 text-white shrink-0">
                             <DialogTitle className="text-xl font-bold flex items-center gap-2">
                               <Ticket className="h-5 w-5 text-red-500" />
                               Ticket Details
@@ -811,225 +858,231 @@ export default function TicketsPage() {
                               </span>
                             </DialogTitle>
                           </DialogHeader>
-                          <div className="p-8 space-y-6 bg-white">
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Status
-                                </label>
-                                <Badge
-                                  className={cn(
-                                    "px-3 py-1 font-bold rounded-lg border",
-                                    STATUS_VARIANTS[ticket.status]
-                                  )}
-                                >
-                                  {ticket.status}
-                                </Badge>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Category
-                                </label>
-                                <p className="text-sm font-bold text-zinc-900 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
-                                  {ticket.category}
-                                </p>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Area/Asset
-                                </label>
-                                <p className="text-sm font-bold text-zinc-900 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
-                                  {ticket.area_asset || "-"}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-2">
-                                Issue Description
-                              </label>
-                              <div className="bg-zinc-50 border border-zinc-100 p-4 rounded-xl">
-                                <h4 className="font-bold text-zinc-900 mb-2">
-                                  {ticket.title}
-                                </h4>
-                                <p className="text-sm text-zinc-600 leading-relaxed">
-                                  {ticket.customer_inputs ||
-                                    "No description provided."}
-                                </p>
-                              </div>
-                            </div>
-
-                            {ticket.internal_remarks && (
-                              <div className="space-y-1.5 bg-red-50/50 border border-red-100 p-4 rounded-xl">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-red-600 block mb-1">
-                                  Internal Remarks
-                                </label>
-                                <p className="text-sm text-red-900 font-medium">
-                                  {ticket.internal_remarks}
-                                </p>
-                              </div>
-                            )}
-
-                            {ticket.notes && (
-                              <div className="space-y-1.5 bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-1">
-                                  Notes
-                                </label>
-                                <p className="text-sm text-blue-900 font-medium">
-                                  {ticket.notes}
-                                </p>
-                              </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-6">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Assigned To
-                                </label>
-                                <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
-                                  <User size={14} className="text-zinc-400" />
-                                  {ticket.assigned_to || "Unassigned"}
-                                </p>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Created By
-                                </label>
-                                <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
-                                  <User size={14} className="text-zinc-400" />
-                                  {ticket.created_user || "-"}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-6">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Contact Person
-                                </label>
-                                <p className="text-sm font-bold text-zinc-800">
-                                  {ticket.contact_name || "-"}
-                                </p>
-                                <p className="text-xs text-zinc-500 flex items-center gap-1">
-                                  <Phone size={12} />
-                                  {ticket.contact_number || "-"}
-                                </p>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Site Location
-                                </label>
-                                <p className="text-sm font-bold text-zinc-800">
-                                  {ticket.site_id}
-                                </p>
-                                <p className="text-xs text-zinc-500 flex items-center gap-1">
-                                  <MapPin size={12} />
-                                  {ticket.location}
-                                </p>
-                              </div>
-                            </div>
-
-                            {(ticket.current_temperature ||
-                              ticket.current_rh) && (
-                              <div className="grid grid-cols-2 gap-6 bg-orange-50/50 border border-orange-100 p-4 rounded-xl">
+                          <div className="flex-1 overflow-y-auto">
+                            <div className="p-8 space-y-6">
+                              <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-black uppercase tracking-widest text-orange-600">
-                                    Current Conditions
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Status
                                   </label>
-                                  <p className="text-sm font-bold text-orange-900">
-                                    Temp: {ticket.current_temperature || "-"}°C
-                                    | RH: {ticket.current_rh || "-"}%
+                                  <Badge
+                                    className={cn(
+                                      "px-3 py-1 font-bold rounded-lg border",
+                                      STATUS_VARIANTS[ticket.status] ||
+                                        "bg-zinc-100 text-zinc-600",
+                                    )}
+                                  >
+                                    {ticket.status}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Category
+                                  </label>
+                                  <p className="text-sm font-bold text-zinc-900 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
+                                    {ticket.category}
                                   </p>
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-[10px] font-black uppercase tracking-widest text-orange-600">
-                                    Standard Conditions
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Area/Asset
                                   </label>
-                                  <p className="text-sm font-bold text-orange-900">
-                                    Temp: {ticket.standard_temperature || "-"}°C
-                                    | RH: {ticket.standard_rh || "-"}%
+                                  <p className="text-sm font-bold text-zinc-900 bg-zinc-50 p-2 rounded-lg border border-zinc-100">
+                                    {ticket.area_asset || "-"}
                                   </p>
                                 </div>
                               </div>
-                            )}
 
-                            {(ticket.spare_type || ticket.spare_quantity) && (
-                              <div className="space-y-1 bg-purple-50/50 border border-purple-100 p-4 rounded-xl">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-purple-600 block mb-1">
-                                  Spare Parts
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-2">
+                                  Issue Description
                                 </label>
-                                <p className="text-sm font-bold text-purple-900">
-                                  {ticket.spare_type}{" "}
-                                  {ticket.spare_quantity &&
-                                    `(Qty: ${ticket.spare_quantity})`}
-                                </p>
+                                <div className="bg-zinc-50 border border-zinc-100 p-4 rounded-xl">
+                                  <h4 className="font-bold text-zinc-900 mb-2">
+                                    {ticket.title}
+                                  </h4>
+                                  <p className="text-sm text-zinc-600 leading-relaxed">
+                                    {ticket.customer_inputs ||
+                                      "No description provided."}
+                                  </p>
+                                </div>
                               </div>
-                            )}
 
-                            <div className="grid grid-cols-2 gap-6 border-t border-zinc-100 pt-6">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Created At
-                                </label>
-                                <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
-                                  <CalendarIcon
-                                    size={14}
-                                    className="text-zinc-400"
-                                  />
-                                  {ticket.created_at
-                                    ? format(
-                                        new Date(ticket.created_at),
-                                        "PPP p"
-                                      )
-                                    : "-"}
-                                </p>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                                  Last Updated
-                                </label>
-                                <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
-                                  <Clock size={14} className="text-zinc-400" />
-                                  {ticket.updated_at
-                                    ? format(
-                                        new Date(ticket.updated_at),
-                                        "PPP p"
-                                      )
-                                    : "-"}
-                                </p>
-                              </div>
-                            </div>
+                              {ticket.internal_remarks && (
+                                <div className="space-y-1.5 bg-red-50/50 border border-red-100 p-4 rounded-xl">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-red-600 block mb-1">
+                                    Internal Remarks
+                                  </label>
+                                  <p className="text-sm text-red-900 font-medium">
+                                    {ticket.internal_remarks}
+                                  </p>
+                                </div>
+                              )}
 
-                            {(ticket.resolved_at || ticket.closed_at) && (
+                              {ticket.notes && (
+                                <div className="space-y-1.5 bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-blue-600 block mb-1">
+                                    Notes
+                                  </label>
+                                  <p className="text-sm text-blue-900 font-medium">
+                                    {ticket.notes}
+                                  </p>
+                                </div>
+                              )}
+
                               <div className="grid grid-cols-2 gap-6">
-                                {ticket.resolved_at && (
-                                  <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-green-600">
-                                      Resolved At
-                                    </label>
-                                    <p className="text-sm font-bold text-green-800">
-                                      {format(
-                                        new Date(ticket.resolved_at),
-                                        "PPP p"
-                                      )}
-                                    </p>
-                                  </div>
-                                )}
-                                {ticket.closed_at && (
-                                  <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">
-                                      Closed At
-                                    </label>
-                                    <p className="text-sm font-bold text-zinc-800">
-                                      {format(
-                                        new Date(ticket.closed_at),
-                                        "PPP p"
-                                      )}
-                                    </p>
-                                  </div>
-                                )}
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Assigned To
+                                  </label>
+                                  <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
+                                    <User size={14} className="text-zinc-400" />
+                                    {ticket.assigned_to || "Unassigned"}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Created By
+                                  </label>
+                                  <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
+                                    <User size={14} className="text-zinc-400" />
+                                    {ticket.created_user || "-"}
+                                  </p>
+                                </div>
                               </div>
-                            )}
+
+                              <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Contact Person
+                                  </label>
+                                  <p className="text-sm font-bold text-zinc-800">
+                                    {ticket.contact_name || "-"}
+                                  </p>
+                                  <p className="text-xs text-zinc-500 flex items-center gap-1">
+                                    <Phone size={12} />
+                                    {ticket.contact_number || "-"}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Site Location
+                                  </label>
+                                  <p className="text-sm font-bold text-zinc-800">
+                                    {ticket.site_id}
+                                  </p>
+                                  <p className="text-xs text-zinc-500 flex items-center gap-1">
+                                    <MapPin size={12} />
+                                    {ticket.location}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {(ticket.current_temperature ||
+                                ticket.current_rh) && (
+                                <div className="grid grid-cols-2 gap-6 bg-orange-50/50 border border-orange-100 p-4 rounded-xl">
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-orange-600">
+                                      Current Conditions
+                                    </label>
+                                    <p className="text-sm font-bold text-orange-900">
+                                      Temp: {ticket.current_temperature || "-"}
+                                      °C | RH: {ticket.current_rh || "-"}%
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-orange-600">
+                                      Standard Conditions
+                                    </label>
+                                    <p className="text-sm font-bold text-orange-900">
+                                      Temp: {ticket.standard_temperature || "-"}
+                                      °C | RH: {ticket.standard_rh || "-"}%
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {(ticket.spare_type || ticket.spare_quantity) && (
+                                <div className="space-y-1 bg-purple-50/50 border border-purple-100 p-4 rounded-xl">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-purple-600 block mb-1">
+                                    Spare Parts
+                                  </label>
+                                  <p className="text-sm font-bold text-purple-900">
+                                    {ticket.spare_type}{" "}
+                                    {ticket.spare_quantity &&
+                                      `(Qty: ${ticket.spare_quantity})`}
+                                  </p>
+                                </div>
+                              )}
+
+                              <div className="grid grid-cols-2 gap-6 border-t border-zinc-100 pt-6">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Created At
+                                  </label>
+                                  <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
+                                    <CalendarIcon
+                                      size={14}
+                                      className="text-zinc-400"
+                                    />
+                                    {ticket.created_at
+                                      ? format(
+                                          new Date(ticket.created_at),
+                                          "PPP p",
+                                        )
+                                      : "-"}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    Last Updated
+                                  </label>
+                                  <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
+                                    <Clock
+                                      size={14}
+                                      className="text-zinc-400"
+                                    />
+                                    {ticket.updated_at
+                                      ? format(
+                                          new Date(ticket.updated_at),
+                                          "PPP p",
+                                        )
+                                      : "-"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {(ticket.resolved_at || ticket.closed_at) && (
+                                <div className="grid grid-cols-2 gap-6">
+                                  {ticket.resolved_at && (
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black uppercase tracking-widest text-green-600">
+                                        Resolved At
+                                      </label>
+                                      <p className="text-sm font-bold text-green-800">
+                                        {format(
+                                          new Date(ticket.resolved_at),
+                                          "PPP p",
+                                        )}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {ticket.closed_at && (
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+                                        Closed At
+                                      </label>
+                                      <p className="text-sm font-bold text-zinc-800">
+                                        {format(
+                                          new Date(ticket.closed_at),
+                                          "PPP p",
+                                        )}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </DialogContent>
                       </Dialog>
@@ -1121,7 +1174,7 @@ export default function TicketsPage() {
                         className={cn(
                           "h-8 w-8 p-0 border-zinc-300",
                           currentPage === pageNumber &&
-                            "bg-red-600 hover:bg-red-700 text-white border-red-600"
+                            "bg-red-600 hover:bg-red-700 text-white border-red-600",
                         )}
                       >
                         {pageNumber}
@@ -1214,6 +1267,88 @@ export default function TicketsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Edit Dialog */}
+      <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-red-600" />
+              Bulk Edit {selectedIds.size} Tickets
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-status">Update Status</Label>
+              <Select
+                value={bulkEditData.status}
+                onValueChange={(val) =>
+                  setBulkEditData({ ...bulkEditData, status: val })
+                }
+              >
+                <SelectTrigger id="bulk-status">
+                  <SelectValue placeholder="Keep current status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Open">Open</SelectItem>
+                  <SelectItem value="Inprogress">In Progress</SelectItem>
+                  <SelectItem value="Resolved">Resolved</SelectItem>
+                  <SelectItem value="Hold">Hold</SelectItem>
+                  <SelectItem value="Waiting">Waiting</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bulk-assignee">Update Assignee</Label>
+              <Input
+                id="bulk-assignee"
+                value={bulkEditData.assigned_to}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setBulkEditData({
+                    ...bulkEditData,
+                    assigned_to: e.target.value,
+                  })
+                }
+                placeholder="Enter assignee name..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bulk-remarks">Internal Remarks</Label>
+              <Textarea
+                id="bulk-remarks"
+                value={bulkEditData.internal_remarks}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setBulkEditData({
+                    ...bulkEditData,
+                    internal_remarks: e.target.value,
+                  })
+                }
+                placeholder="Enter internal remarks..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkEditAction}
+              disabled={bulkEditLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {bulkEditLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

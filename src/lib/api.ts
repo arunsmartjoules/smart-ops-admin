@@ -25,12 +25,14 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  if (!headers.has("Content-Type")) {
+  if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
   try {
-    const response = await fetch(`${BACKEND_URL}${path}`, {
+    const url = `${BACKEND_URL}${path}`;
+    console.log(`[API-FETCH] Requesting: ${url}`);
+    const response = await fetch(url, {
       ...options,
       headers,
     });
@@ -62,7 +64,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
         {
           status: 429,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -77,7 +79,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
       {
         status: 500,
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
   }
 }

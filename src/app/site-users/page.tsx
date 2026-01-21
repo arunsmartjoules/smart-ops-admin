@@ -150,7 +150,7 @@ export default function SiteUsersPage() {
 
   const toggleUserSelection = (userId: string, checked: boolean) => {
     setSelectedUserIds((prev) =>
-      checked ? [...prev, userId] : prev.filter((id) => id !== userId)
+      checked ? [...prev, userId] : prev.filter((id) => id !== userId),
     );
   };
 
@@ -179,7 +179,7 @@ export default function SiteUsersPage() {
         } else if (result.errors) {
           const errorMsgs = result.errors.map((e: any) => e.error).join(", ");
           alert(
-            `${result.assigned} user(s) assigned, but some failed: ${errorMsgs}`
+            `${result.assigned} user(s) assigned, but some failed: ${errorMsgs}`,
           );
           fetchSiteUsers();
           setIsAssignOpen(false);
@@ -212,13 +212,13 @@ export default function SiteUsersPage() {
 
       // 2. Identify users to add and remove
       const toAdd = selectedUserIds.filter(
-        (id) => !currentAssignedIds.includes(id)
+        (id) => !currentAssignedIds.includes(id),
       );
       const toRemove = currentAssignedIds.filter(
-        (id) => !selectedUserIds.includes(id)
+        (id) => !selectedUserIds.includes(id),
       );
       const toUpdate = currentAssignedIds.filter((id) =>
-        selectedUserIds.includes(id)
+        selectedUserIds.includes(id),
       );
 
       const results = {
@@ -234,7 +234,7 @@ export default function SiteUsersPage() {
           `/api/site-users/${editingItem.site_id}/${userId}`,
           {
             method: "DELETE",
-          }
+          },
         );
         const data = await res.json();
         if (data.success) results.removed++;
@@ -251,7 +251,7 @@ export default function SiteUsersPage() {
               role_at_site: formData.role_at_site,
               is_primary: formData.is_primary,
             }),
-          }
+          },
         );
         const data = await res.json();
         if (data.success) results.updated++;
@@ -357,11 +357,11 @@ export default function SiteUsersPage() {
     (u) =>
       userSearchTerm === "" ||
       u.name?.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(userSearchTerm.toLowerCase())
+      u.email?.toLowerCase().includes(userSearchTerm.toLowerCase()),
   );
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full space-y-4 p-4 sm:p-6 pb-2">
       {/* Modern Header */}
       <div className="flex items-center justify-between shrink-0">
         <div>
@@ -407,7 +407,7 @@ export default function SiteUsersPage() {
                           .includes(siteSearchTerm.toLowerCase()) ||
                         s.site_code
                           ?.toLowerCase()
-                          .includes(siteSearchTerm.toLowerCase())
+                          .includes(siteSearchTerm.toLowerCase()),
                     )
                     .slice(0, 30)
                     .map((site) => (
@@ -417,7 +417,7 @@ export default function SiteUsersPage() {
                           "flex items-center gap-3 p-3 rounded-md cursor-pointer transition-all border",
                           formData.site_id === site.site_id
                             ? "bg-red-50 border-red-200 shadow-sm"
-                            : "bg-white border-zinc-200 hover:border-red-200"
+                            : "bg-white border-zinc-200 hover:border-red-200",
                         )}
                         onClick={() =>
                           setFormData({ ...formData, site_id: site.site_id })
@@ -428,7 +428,7 @@ export default function SiteUsersPage() {
                             "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all",
                             formData.site_id === site.site_id
                               ? "border-red-600"
-                              : "border-zinc-300"
+                              : "border-zinc-300",
                           )}
                         >
                           {formData.site_id === site.site_id && (
@@ -477,12 +477,12 @@ export default function SiteUsersPage() {
                         "flex items-center gap-3 p-3 rounded-md cursor-pointer transition-all border",
                         selectedUserIds.includes(user.user_id)
                           ? "bg-red-50 border-red-200 shadow-sm"
-                          : "bg-white border-zinc-200 hover:border-red-200"
+                          : "bg-white border-zinc-200 hover:border-red-200",
                       )}
                       onClick={() =>
                         toggleUserSelection(
                           user.user_id,
-                          !selectedUserIds.includes(user.user_id)
+                          !selectedUserIds.includes(user.user_id),
                         )
                       }
                     >
@@ -627,12 +627,12 @@ export default function SiteUsersPage() {
                       "flex items-center gap-3 p-3 rounded-md cursor-pointer transition-all border",
                       selectedUserIds.includes(user.user_id)
                         ? "bg-red-50 border-red-200 shadow-sm"
-                        : "bg-white border-zinc-200 hover:border-red-200"
+                        : "bg-white border-zinc-200 hover:border-red-200",
                     )}
                     onClick={() =>
                       toggleUserSelection(
                         user.user_id,
-                        !selectedUserIds.includes(user.user_id)
+                        !selectedUserIds.includes(user.user_id),
                       )
                     }
                   >
@@ -768,7 +768,7 @@ export default function SiteUsersPage() {
       </div>
 
       {/* Main Table */}
-      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
           <Table className="border-separate border-spacing-0">
             <TableHeader className="bg-zinc-50 sticky top-0 z-20">

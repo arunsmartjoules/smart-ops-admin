@@ -65,6 +65,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { TableSkeleton } from "@/components/table-skeleton";
+import { ImportDialog } from "@/components/import-dialog";
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
@@ -86,6 +87,55 @@ export default function UsersPage() {
   } | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
+    new Set([
+      "employee_code",
+      "name",
+      "email",
+      "role",
+      "designation",
+      "department",
+      "status",
+      "phone",
+      "site_code",
+    ]),
+  );
+
+  const ALL_COLUMNS = [
+    { key: "employee_code", label: "Emp Code" },
+    { key: "name", label: "Name" },
+    { key: "email", label: "Email" },
+    { key: "platform_email", label: "Platform Email" },
+    { key: "role", label: "Role" },
+    { key: "designation", label: "Designation" },
+    { key: "department", label: "Department" },
+    { key: "status", label: "Status" },
+    { key: "phone", label: "Phone" },
+    { key: "mobile", label: "Mobile" },
+    { key: "site_code", label: "Site Code" },
+    { key: "site_id", label: "Site ID" },
+    { key: "supervisor", label: "Supervisor" },
+    { key: "approving_authority", label: "Approver" },
+    { key: "travel_approver", label: "Travel Approver" },
+    { key: "assigned_shift_code", label: "Shift" },
+    { key: "date_of_joining", label: "Joined On" },
+    { key: "date_of_birth", label: "DOB" },
+    { key: "work_location_type", label: "Location" },
+    { key: "project_type", label: "Project" },
+    { key: "is_superadmin", label: "Superadmin" },
+    { key: "created_at", label: "Created At" },
+    { key: "updated_at", label: "Updated At" },
+  ];
+
+  const toggleColumn = (key: string) => {
+    const newSet = new Set(visibleColumns);
+    if (newSet.has(key)) {
+      newSet.delete(key);
+    } else {
+      newSet.add(key);
+    }
+    setVisibleColumns(newSet);
+  };
 
   const handleSort = (key: string) => {
     let direction: "asc" | "desc" = "asc";
@@ -117,7 +167,7 @@ export default function UsersPage() {
       const res = await apiFetch(
         `/api/users?page=${page}&limit=${pagination.limit}${
           search ? `&search=${encodeURIComponent(search)}` : ""
-        }`
+        }`,
       );
       const result = await res.json();
       if (result.success) {
@@ -156,46 +206,15 @@ export default function UsersPage() {
   const exportToCSV = () => {
     if (users.length === 0) return;
 
-    const headers = [
-      "Employee Code",
-      "Name",
-      "Email",
-      "Phone",
-      "Role",
-      "Site ID",
-      "Site Code",
-      "Designation",
-      "Department",
-      "Status",
-      "DOB",
-      "DOJ",
-      "Supervisor",
-      "Superadmin",
-      "Work Location",
-    ];
+    const headers = ALL_COLUMNS.map((c) => c.label);
 
     const csvContent = [
       headers.join(","),
       ...users.map((u) =>
-        [
-          u.employee_code,
-          u.name,
-          u.email,
-          u.phone,
-          u.role,
-          u.site_id,
-          u.site_code,
-          u.designation,
-          u.department,
-          u.status,
-          u.date_of_birth,
-          u.date_of_joining,
-          u.supervisor,
-          u.is_superadmin,
-          u.work_location_type,
-        ]
-          .map((v) => `"${v || ""}"`)
-          .join(",")
+        ALL_COLUMNS.map((col) => {
+          const val = u[col.key];
+          return `"${val === null || val === undefined ? "" : val}"`;
+        }).join(","),
       ),
     ].join("\n");
 
@@ -205,7 +224,7 @@ export default function UsersPage() {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `users_export_${new Date().toISOString().split("T")[0]}.csv`
+      `users_export_${new Date().toISOString().split("T")[0]}.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
@@ -223,7 +242,7 @@ export default function UsersPage() {
 
   const toggleSelect = (userId: string, checked: boolean) => {
     setSelectedIds((prev) =>
-      checked ? [...prev, userId] : prev.filter((id) => id !== userId)
+      checked ? [...prev, userId] : prev.filter((id) => id !== userId),
     );
   };
 
@@ -269,7 +288,7 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full space-y-4 p-4 sm:p-6 pb-2">
       {/* Modern Header with Gradient Accent */}
       <div className="flex items-center justify-between shrink-0">
         <div>
@@ -289,6 +308,45 @@ export default function UsersPage() {
           >
             <Download className="mr-2 h-4 w-4 text-zinc-500" /> Export CSV
           </Button>
+
+          <ImportDialog
+            type="users"
+            onSuccess={() => fetchUsers(pagination.page)}
+          />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-zinc-300">
+                <Filter className="mr-2 h-4 w-4" /> Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 max-h-[80vh] overflow-y-auto z-100">
+              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {ALL_COLUMNS.map((col) => (
+                <div
+                  key={col.key}
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-100 cursor-pointer rounded-md transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleColumn(col.key);
+                  }}
+                >
+                  <Checkbox
+                    id={`col-${col.key}`}
+                    checked={visibleColumns.has(col.key)}
+                    onCheckedChange={() => toggleColumn(col.key)}
+                  />
+                  <label
+                    htmlFor={`col-${col.key}`}
+                    className="text-xs font-medium cursor-pointer flex-1"
+                  >
+                    {col.label}
+                  </label>
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {isSuperAdmin && (
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -366,12 +424,12 @@ export default function UsersPage() {
       </div>
 
       {/* Modern Table Container with Enhanced Styling */}
-      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
           <Table className="min-w-[2100px] border-separate border-spacing-0">
             <TableHeader className="bg-zinc-50 sticky top-0 z-30">
               <TableRow>
-                <TableHead className="w-[48px] bg-zinc-50/80 backdrop-blur sticky top-0 left-0 z-40 shadow-sm border-b px-4">
+                <TableHead className="w-[48px] bg-zinc-50/80 backdrop-blur sticky top-0 left-0 z-40 shadow-sm border-b px-4 text-center">
                   <Checkbox
                     checked={
                       filteredUsers.length > 0 &&
@@ -380,140 +438,30 @@ export default function UsersPage() {
                     onCheckedChange={(checked) => toggleSelectAll(!!checked)}
                   />
                 </TableHead>
-                <TableHead className="w-[120px] bg-zinc-50 sticky top-0 z-20 shadow-sm border-b">
-                  <button
-                    className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900"
-                    onClick={() => handleSort("employee_code")}
-                  >
-                    Emp Code
-                    {sortConfig?.key === "employee_code" ? (
-                      sortConfig.direction === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="h-3 w-3" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-30" />
-                    )}
-                  </button>
-                </TableHead>
-                <TableHead className="min-w-[200px] bg-zinc-50 sticky top-0 z-20 shadow-sm border-b">
-                  <button
-                    className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900"
-                    onClick={() => handleSort("name")}
-                  >
-                    Name
-                    {sortConfig?.key === "name" ? (
-                      sortConfig.direction === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="h-3 w-3" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-30" />
-                    )}
-                  </button>
-                </TableHead>
-                <TableHead className="min-w-[200px] bg-zinc-50 sticky top-0 z-20 shadow-sm border-b">
-                  <button
-                    className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900"
-                    onClick={() => handleSort("email")}
-                  >
-                    Email
-                    {sortConfig?.key === "email" ? (
-                      sortConfig.direction === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="h-3 w-3" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-30" />
-                    )}
-                  </button>
-                </TableHead>
-                <TableHead className="min-w-[120px] bg-zinc-50 sticky top-0 z-20 shadow-sm border-b">
-                  <button
-                    className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900"
-                    onClick={() => handleSort("role")}
-                  >
-                    Role
-                    {sortConfig?.key === "role" ? (
-                      sortConfig.direction === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="h-3 w-3" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-30" />
-                    )}
-                  </button>
-                </TableHead>
-                <TableHead className="min-w-[150px] bg-zinc-50 sticky top-0 z-20 shadow-sm border-b">
-                  <button
-                    className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900"
-                    onClick={() => handleSort("designation")}
-                  >
-                    Designation
-                    {sortConfig?.key === "designation" ? (
-                      sortConfig.direction === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="h-3 w-3" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-30" />
-                    )}
-                  </button>
-                </TableHead>
-                <TableHead className="min-w-[150px] bg-zinc-50 sticky top-0 z-20 shadow-sm border-b">
-                  <button
-                    className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900"
-                    onClick={() => handleSort("department")}
-                  >
-                    Department
-                    {sortConfig?.key === "department" ? (
-                      sortConfig.direction === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="h-3 w-3" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-30" />
-                    )}
-                  </button>
-                </TableHead>
-                <TableHead className="min-w-[100px] bg-zinc-50 sticky top-0 z-20 shadow-sm border-b">
-                  <button
-                    className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900"
-                    onClick={() => handleSort("status")}
-                  >
-                    Status
-                    {sortConfig?.key === "status" ? (
-                      sortConfig.direction === "asc" ? (
-                        <ArrowUp className="h-3 w-3" />
-                      ) : (
-                        <ArrowDown className="h-3 w-3" />
-                      )
-                    ) : (
-                      <ArrowUpDown className="h-3 w-3 opacity-30" />
-                    )}
-                  </button>
-                </TableHead>
-                <TableHead className="min-w-[150px] bg-zinc-50 text-zinc-900 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-20 shadow-sm border-b">
-                  Phone
-                </TableHead>
-                <TableHead className="min-w-[150px] bg-zinc-50 text-zinc-900 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-20 shadow-sm border-b">
-                  Site Code
-                </TableHead>
-                <TableHead className="min-w-[150px] bg-zinc-50 text-zinc-900 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-20 shadow-sm border-b">
-                  Supervisor
-                </TableHead>
-                <TableHead className="min-w-[150px] bg-zinc-50 text-zinc-900 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-20 shadow-sm border-b">
-                  Joined On
-                </TableHead>
-                <TableHead className="min-w-[120px] bg-zinc-50 text-zinc-900 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-20 shadow-sm border-b">
-                  Work Location
-                </TableHead>
+                {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map(
+                  (col) => (
+                    <TableHead
+                      key={col.key}
+                      className="bg-zinc-50 sticky top-0 z-20 shadow-sm border-b"
+                    >
+                      <button
+                        className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900 whitespace-nowrap"
+                        onClick={() => handleSort(col.key)}
+                      >
+                        {col.label}
+                        {sortConfig?.key === col.key ? (
+                          sortConfig.direction === "asc" ? (
+                            <ArrowUp className="h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="h-3 w-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 opacity-30" />
+                        )}
+                      </button>
+                    </TableHead>
+                  ),
+                )}
                 <TableHead className="min-w-[80px] bg-zinc-50 text-right sticky right-0 top-0 z-30 shadow-sm border-b border-l uppercase text-[10px] font-bold tracking-wider text-zinc-900 px-6">
                   Actions
                 </TableHead>
@@ -540,7 +488,7 @@ export default function UsersPage() {
                       selectedIds.includes(user.user_id) ? "bg-red-50/30" : ""
                     }`}
                   >
-                    <TableCell className="px-4 sticky left-0 z-10 bg-white group-hover:bg-zinc-50 transition-colors border-r border-zinc-100">
+                    <TableCell className="px-4 sticky left-0 z-10 bg-white group-hover:bg-zinc-50 transition-colors border-r border-zinc-100 text-center">
                       <Checkbox
                         checked={selectedIds.includes(user.user_id)}
                         onCheckedChange={(checked) =>
@@ -548,76 +496,76 @@ export default function UsersPage() {
                         }
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-[11px] font-bold text-zinc-400">
-                      {user.employee_code || "N/A"}
-                    </TableCell>
-                    <TableCell className="font-bold text-zinc-900">
-                      <div className="flex items-center gap-2">
-                        {user.name}
-                        {user.is_superadmin && (
-                          <ShieldCheck className="h-3.5 w-3.5 text-red-600" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs text-zinc-600 font-medium">
-                      {user.email}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          user.role === "admin" ? "default" : "secondary"
-                        }
-                        className={cn(
-                          "text-[10px] font-bold uppercase px-2 shadow-none",
-                          user.role === "admin"
-                            ? "bg-red-600"
-                            : "bg-zinc-100 text-zinc-600"
-                        )}
-                      >
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs font-medium text-zinc-600">
-                      {user.designation || "-"}
-                    </TableCell>
-                    <TableCell className="text-xs font-medium text-zinc-600">
-                      {user.department || "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px] font-bold uppercase px-2 shadow-none border-none",
-                          user.status === "Active" || user.is_active
-                            ? "text-green-600 bg-green-50"
-                            : user.status === "Inactive"
-                            ? "text-red-600 bg-red-50"
-                            : user.status === "Pending"
-                            ? "text-amber-600 bg-amber-50"
-                            : "text-zinc-600 bg-zinc-50"
-                        )}
-                      >
-                        {user.status ||
-                          (user.is_active ? "Active" : "Inactive")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs font-mono text-zinc-500 font-medium">
-                      {user.phone || user.mobile || "-"}
-                    </TableCell>
-                    <TableCell className="text-[11px] font-bold text-zinc-700">
-                      {user.site_code || "-"}
-                    </TableCell>
-                    <TableCell className="text-xs text-zinc-600 font-medium">
-                      {user.supervisor || "-"}
-                    </TableCell>
-                    <TableCell className="text-xs text-zinc-600 font-medium">
-                      {user.date_of_joining
-                        ? new Date(user.date_of_joining).toLocaleDateString()
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-xs text-zinc-600 font-medium">
-                      {user.work_location_type || "-"}
-                    </TableCell>
+                    {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map(
+                      (col) => (
+                        <TableCell key={col.key}>
+                          {col.key === "status" ? (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] font-bold uppercase px-2 shadow-none border-none",
+                                user.status === "Active" || user.is_active
+                                  ? "text-green-600 bg-green-50"
+                                  : user.status === "Inactive"
+                                    ? "text-red-600 bg-red-50"
+                                    : user.status === "Pending"
+                                      ? "text-amber-600 bg-amber-50"
+                                      : "text-zinc-600 bg-zinc-50",
+                              )}
+                            >
+                              {user.status ||
+                                (user.is_active ? "Active" : "Inactive")}
+                            </Badge>
+                          ) : col.key === "role" ? (
+                            <Badge
+                              variant={
+                                user.role === "admin" ? "default" : "secondary"
+                              }
+                              className={cn(
+                                "text-[10px] font-bold uppercase px-2 shadow-none",
+                                user.role === "admin"
+                                  ? "bg-red-600"
+                                  : "bg-zinc-100 text-zinc-600",
+                              )}
+                            >
+                              {user.role}
+                            </Badge>
+                          ) : col.key === "name" ? (
+                            <div className="flex items-center gap-2 font-bold text-zinc-900 whitespace-nowrap">
+                              {user.name}
+                              {user.is_superadmin && (
+                                <ShieldCheck className="h-3.5 w-3.5 text-red-600" />
+                              )}
+                            </div>
+                          ) : col.key === "employee_code" ? (
+                            <span className="font-mono text-[11px] font-bold text-zinc-400 whitespace-nowrap">
+                              {user[col.key] || "N/A"}
+                            </span>
+                          ) : col.key.includes("date") ||
+                            col.key === "created_at" ||
+                            col.key === "updated_at" ? (
+                            <span className="text-xs text-zinc-500 font-medium whitespace-nowrap">
+                              {user[col.key]
+                                ? format(
+                                    new Date(user[col.key]),
+                                    "MMM dd, yyyy",
+                                  )
+                                : "-"}
+                            </span>
+                          ) : col.key === "is_superadmin" ? (
+                            user[col.key] ? (
+                              <ShieldCheck className="h-4 w-4 text-red-600" />
+                            ) : (
+                              "-"
+                            )
+                          ) : (
+                            <span className="text-xs text-zinc-600 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] block">
+                              {user[col.key] || "-"}
+                            </span>
+                          )}
+                        </TableCell>
+                      ),
+                    )}
                     <TableCell className="text-right sticky right-0 bg-white group-hover:bg-zinc-50 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] transition-colors px-6">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -738,48 +686,41 @@ export default function UsersPage() {
 }
 
 function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
-  const [formData, setFormData] = useState<any>(
-    user || {
-      name: "",
-      email: "",
-      employee_code: "",
-      phone: "",
-      role: "staff",
-      designation: "",
-      department: "",
-      site_code: "",
-      supervisor: "",
-      date_of_joining: "",
-      is_active: true,
-      is_superadmin: false,
-      status: "Active",
-      work_location_type: "On-site",
-    }
-  );
+  const { useForm } = require("react-hook-form");
+  const { zodResolver } = require("@hookform/resolvers/zod");
+  const { userFormSchema, userFormDefaults } = require("@/lib/validations");
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: user || userFormDefaults,
+    mode: "onBlur",
+  });
+
   const { user: currentUser } = useAuth();
   const isSuperAdmin =
     currentUser?.is_superadmin ||
     currentUser?.email === "arun.kumar@smartjoules.in";
 
-  const handleChange = (e: any) => {
-    const { id, value, type, checked } = e.target;
-    setFormData((prev: any) => ({
-      ...prev,
-      [id]: type === "checkbox" ? checked : value,
-    }));
-  };
+  const watchRole = watch("role");
+  const watchIsActive = watch("is_active");
+  const watchDateOfJoining = watch("date_of_joining");
+  const watchDateOfBirth = watch("date_of_birth");
+  const watchWorkLocationType = watch("work_location_type");
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
+  const onSubmit = async (data: any) => {
     try {
       const method = user ? "PUT" : "POST";
       const path = user ? `/api/users/${user.user_id}` : "/api/users";
 
       const res = await apiFetch(path, {
         method,
-        body: JSON.stringify(formData),
+        body: JSON.stringify(data),
       });
 
       if (res.ok) {
@@ -790,59 +731,93 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
       }
     } catch (error) {
       console.error("Save error", error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
+  const FormFieldError = ({ name }: { name: string }) => {
+    const error = errors[name];
+    if (!error) return null;
+    return (
+      <div className="flex items-center gap-1.5 text-red-600 mt-1">
+        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <span className="text-xs font-medium">{error.message as string}</span>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6 py-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label
             htmlFor="name"
-            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+            className={cn(
+              "text-sm font-bold text-zinc-700 uppercase tracking-tight flex items-center gap-1",
+              errors.name && "text-red-600",
+            )}
           >
-            Full Name
+            Full Name <span className="text-red-500">*</span>
           </label>
           <Input
             id="name"
-            value={formData.name || ""}
-            onChange={handleChange}
+            {...register("name")}
             placeholder="John Doe"
-            className="bg-white border-zinc-200"
+            className={cn(
+              "bg-white border-zinc-200",
+              errors.name && "border-red-300 focus-visible:ring-red-500",
+            )}
           />
+          <FormFieldError name="name" />
         </div>
         <div className="space-y-2">
           <label
             htmlFor="email"
-            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+            className={cn(
+              "text-sm font-bold text-zinc-700 uppercase tracking-tight flex items-center gap-1",
+              errors.email && "text-red-600",
+            )}
           >
-            Email Address
+            Email Address <span className="text-red-500">*</span>
           </label>
           <Input
             id="email"
             type="email"
-            value={formData.email || ""}
-            onChange={handleChange}
+            {...register("email")}
             placeholder="john@smartjoules.com"
-            className="bg-white border-zinc-200"
+            className={cn(
+              "bg-white border-zinc-200",
+              errors.email && "border-red-300 focus-visible:ring-red-500",
+            )}
           />
+          <FormFieldError name="email" />
         </div>
         <div className="space-y-2">
           <label
             htmlFor="employee_code"
-            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+            className={cn(
+              "text-sm font-bold text-zinc-700 uppercase tracking-tight flex items-center gap-1",
+              errors.employee_code && "text-red-600",
+            )}
           >
-            Employee Code
+            Employee Code <span className="text-red-500">*</span>
           </label>
           <Input
             id="employee_code"
-            value={formData.employee_code || ""}
-            onChange={handleChange}
+            {...register("employee_code")}
             placeholder="SJ001"
-            className="bg-white border-zinc-200"
+            className={cn(
+              "bg-white border-zinc-200",
+              errors.employee_code &&
+                "border-red-300 focus-visible:ring-red-500",
+            )}
           />
+          <FormFieldError name="employee_code" />
         </div>
         <div className="space-y-2">
           <label
@@ -853,24 +828,37 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
           </label>
           <Input
             id="phone"
-            value={formData.phone || formData.mobile || ""}
-            onChange={handleChange}
+            {...register("phone")}
             placeholder="+91 ..."
-            className="bg-white border-zinc-200"
+            className={cn(
+              "bg-white border-zinc-200",
+              errors.phone && "border-red-300 focus-visible:ring-red-500",
+            )}
           />
+          <FormFieldError name="phone" />
         </div>
         <div className="space-y-2">
           <label
             htmlFor="role"
-            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+            className={cn(
+              "text-sm font-bold text-zinc-700 uppercase tracking-tight flex items-center gap-1",
+              errors.role && "text-red-600",
+            )}
           >
-            System Role
+            System Role <span className="text-red-500">*</span>
           </label>
           <Select
-            value={formData.role}
-            onValueChange={(val) => setFormData({ ...formData, role: val })}
+            value={watchRole}
+            onValueChange={(val) =>
+              setValue("role", val, { shouldValidate: true })
+            }
           >
-            <SelectTrigger className="w-full bg-white border-zinc-200">
+            <SelectTrigger
+              className={cn(
+                "w-full bg-white border-zinc-200",
+                errors.role && "border-red-300",
+              )}
+            >
               <SelectValue placeholder="Select role" />
             </SelectTrigger>
             <SelectContent>
@@ -880,6 +868,7 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
               <SelectItem value="staff">Staff</SelectItem>
             </SelectContent>
           </Select>
+          <FormFieldError name="role" />
         </div>
         <div className="space-y-2">
           <label
@@ -890,8 +879,7 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
           </label>
           <Input
             id="designation"
-            value={formData.designation || ""}
-            onChange={handleChange}
+            {...register("designation")}
             placeholder="Maintenance Engineer"
             className="bg-white border-zinc-200"
           />
@@ -905,8 +893,7 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
           </label>
           <Input
             id="department"
-            value={formData.department || ""}
-            onChange={handleChange}
+            {...register("department")}
             placeholder="Operations"
             className="bg-white border-zinc-200"
           />
@@ -920,8 +907,7 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
           </label>
           <Input
             id="site_code"
-            value={formData.site_code || ""}
-            onChange={handleChange}
+            {...register("site_code")}
             placeholder="DEL-HQ"
             className="bg-white border-zinc-200"
           />
@@ -935,8 +921,7 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
           </label>
           <Input
             id="supervisor"
-            value={formData.supervisor || ""}
-            onChange={handleChange}
+            {...register("supervisor")}
             placeholder="Manager Name"
             className="bg-white border-zinc-200"
           />
@@ -954,12 +939,12 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
                 variant={"outline"}
                 className={cn(
                   "w-full justify-start text-left font-normal bg-white border-zinc-200",
-                  !formData.date_of_joining && "text-muted-foreground"
+                  !watchDateOfJoining && "text-muted-foreground",
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.date_of_joining ? (
-                  format(new Date(formData.date_of_joining), "PPP")
+                {watchDateOfJoining ? (
+                  format(new Date(watchDateOfJoining), "PPP")
                 ) : (
                   <span>Pick a date</span>
                 )}
@@ -969,14 +954,11 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
               <Calendar
                 mode="single"
                 selected={
-                  formData.date_of_joining
-                    ? new Date(formData.date_of_joining)
-                    : undefined
+                  watchDateOfJoining ? new Date(watchDateOfJoining) : undefined
                 }
                 onSelect={(date) =>
-                  setFormData({
-                    ...formData,
-                    date_of_joining: date?.toISOString(),
+                  setValue("date_of_joining", date?.toISOString() || "", {
+                    shouldValidate: true,
                   })
                 }
                 initialFocus
@@ -992,9 +974,9 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
             Work Location Type
           </label>
           <Select
-            value={formData.work_location_type}
+            value={watchWorkLocationType}
             onValueChange={(val) =>
-              setFormData({ ...formData, work_location_type: val })
+              setValue("work_location_type", val, { shouldValidate: true })
             }
           >
             <SelectTrigger className="w-full bg-white border-zinc-200">
@@ -1007,20 +989,166 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="platform_email"
+            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+          >
+            Platform Email
+          </label>
+          <Input
+            id="platform_email"
+            type="email"
+            {...register("platform_email")}
+            placeholder="platform@smartjoules.in"
+            className={cn(
+              "bg-white border-zinc-200",
+              errors.platform_email && "border-red-300",
+            )}
+          />
+          <FormFieldError name="platform_email" />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="mobile"
+            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+          >
+            Secondary Mobile
+          </label>
+          <Input
+            id="mobile"
+            {...register("mobile")}
+            placeholder="+91 ..."
+            className={cn(
+              "bg-white border-zinc-200",
+              errors.mobile && "border-red-300",
+            )}
+          />
+          <FormFieldError name="mobile" />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="site_id"
+            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+          >
+            Site ID
+          </label>
+          <Input
+            id="site_id"
+            {...register("site_id")}
+            placeholder="123"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="approving_authority"
+            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+          >
+            Approving Authority
+          </label>
+          <Input
+            id="approving_authority"
+            {...register("approving_authority")}
+            placeholder="Auth Name"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="travel_approver"
+            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+          >
+            Travel Approver
+          </label>
+          <Input
+            id="travel_approver"
+            {...register("travel_approver")}
+            placeholder="Approver Name"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="assigned_shift_code"
+            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+          >
+            Assigned Shift Code
+          </label>
+          <Input
+            id="assigned_shift_code"
+            {...register("assigned_shift_code")}
+            placeholder="GS / NS / ES"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="project_type"
+            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+          >
+            Project Type
+          </label>
+          <Input
+            id="project_type"
+            {...register("project_type")}
+            placeholder="JoulePura"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="space-y-2">
+          <label
+            htmlFor="date_of_birth"
+            className="text-sm font-bold text-zinc-700 uppercase tracking-tight"
+          >
+            Date of Birth
+          </label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal bg-white border-zinc-200",
+                  !watchDateOfBirth && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {watchDateOfBirth ? (
+                  format(new Date(watchDateOfBirth), "PPP")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={
+                  watchDateOfBirth ? new Date(watchDateOfBirth) : undefined
+                }
+                onSelect={(date) =>
+                  setValue("date_of_birth", date?.toISOString() || "", {
+                    shouldValidate: true,
+                  })
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100">
         <div className="flex items-center gap-2">
           <Checkbox
             id="is_active"
-            checked={formData.is_active !== false}
-            onCheckedChange={(checked) =>
-              setFormData({
-                ...formData,
-                is_active: !!checked,
-                status: checked ? "Active" : "Inactive",
-              })
-            }
+            checked={watchIsActive !== false}
+            onCheckedChange={(checked) => {
+              setValue("is_active", !!checked, { shouldValidate: true });
+              setValue("status", checked ? "Active" : "Inactive", {
+                shouldValidate: true,
+              });
+            }}
           />
           <label
             htmlFor="is_active"
@@ -1034,9 +1162,9 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
           <div className="flex items-center gap-2">
             <Checkbox
               id="is_superadmin"
-              checked={formData.is_superadmin === true}
+              checked={watch("is_superadmin") === true}
               onCheckedChange={(checked) =>
-                setFormData({ ...formData, is_superadmin: !!checked })
+                setValue("is_superadmin", !!checked, { shouldValidate: true })
               }
             />
             <label
@@ -1052,7 +1180,7 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
 
       <DialogFooter className="pt-2">
         <Button
-          onClick={handleSubmit}
+          type="submit"
           disabled={isSubmitting}
           className="bg-red-600 hover:bg-red-700 w-full sm:w-auto shadow-lg shadow-red-600/10"
         >
@@ -1062,6 +1190,6 @@ function UserForm({ user, onSave }: { user?: any; onSave: () => void }) {
           {user ? "Update Employee Profile" : "Create Employee Profile"}
         </Button>
       </DialogFooter>
-    </div>
+    </form>
   );
 }

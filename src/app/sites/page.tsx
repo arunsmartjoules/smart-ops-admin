@@ -24,6 +24,9 @@ import {
   Map,
   X,
   CheckSquare,
+  AlertCircle,
+  MessageSquare,
+  Filter,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -45,6 +48,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import NextDynamic from "next/dynamic";
 import { TableSkeleton } from "@/components/table-skeleton";
 
@@ -58,7 +71,7 @@ const InteractiveMapPicker = NextDynamic(
         Loading map...
       </div>
     ),
-  }
+  },
 );
 
 export default function SitesPage() {
@@ -79,6 +92,50 @@ export default function SitesPage() {
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
+    new Set([
+      "site_code",
+      "name",
+      "address",
+      "city",
+      "state",
+      "status",
+      "radius",
+    ]),
+  );
+
+  const ALL_COLUMNS = [
+    { key: "site_code", label: "Site Code" },
+    { key: "name", label: "Site Name" },
+    { key: "address", label: "Address" },
+    { key: "city", label: "City" },
+    { key: "state", label: "State" },
+    { key: "country", label: "Country" },
+    { key: "status", label: "Status" },
+    { key: "is_active", label: "Is Active" },
+    { key: "radius", label: "Radius (m)" },
+    { key: "latitude", label: "Latitude" },
+    { key: "longitude", label: "Longitude" },
+    { key: "project_type", label: "Project Type" },
+    { key: "client", label: "Client" },
+    { key: "site_contact_number", label: "Contact" },
+    { key: "task_executor", label: "Executor" },
+    { key: "seo", label: "SEO" },
+    { key: "rem", label: "REM" },
+    { key: "site_id", label: "Site ID" },
+    { key: "created_at", label: "Created At" },
+    { key: "updated_at", label: "Updated At" },
+  ];
+
+  const toggleColumn = (key: string) => {
+    const newSet = new Set(visibleColumns);
+    if (newSet.has(key)) {
+      newSet.delete(key);
+    } else {
+      newSet.add(key);
+    }
+    setVisibleColumns(newSet);
+  };
 
   const handleSort = (key: string) => {
     let direction: "asc" | "desc" = "asc";
@@ -104,7 +161,7 @@ export default function SitesPage() {
     setLoading(true);
     try {
       const res = await apiFetch(
-        `/api/sites${search ? `?search=${encodeURIComponent(search)}` : ""}`
+        `/api/sites${search ? `?search=${encodeURIComponent(search)}` : ""}`,
       );
       const result = await safeJsonParse(res);
       if (result.success) {
@@ -238,7 +295,7 @@ export default function SitesPage() {
   );
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full space-y-4 p-4 sm:p-6 pb-2">
       {/* Modern Header */}
       <div className="flex items-center justify-between shrink-0">
         <div>
@@ -269,9 +326,8 @@ export default function SitesPage() {
         </Dialog>
       </div>
 
-      {/* Enhanced Search Bar */}
-      <div className="flex items-center gap-3 max-w-md shrink-0 bg-white rounded-xl border border-zinc-200 p-4 shadow-sm">
-        <div className="relative w-full">
+      <div className="flex items-center justify-between shrink-0 bg-white rounded-xl border border-zinc-200 p-4 shadow-sm gap-4">
+        <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
           <Input
             placeholder="Search sites..."
@@ -279,6 +335,42 @@ export default function SitesPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-zinc-300">
+                <Filter className="mr-2 h-4 w-4" /> Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 max-h-[80vh] overflow-y-auto z-100">
+              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {ALL_COLUMNS.map((col) => (
+                <div
+                  key={col.key}
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-zinc-100 cursor-pointer rounded-md transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleColumn(col.key);
+                  }}
+                >
+                  <Checkbox
+                    id={`col-${col.key}`}
+                    checked={visibleColumns.has(col.key)}
+                    onCheckedChange={() => toggleColumn(col.key)}
+                  />
+                  <label
+                    htmlFor={`col-${col.key}`}
+                    className="text-xs font-medium cursor-pointer flex-1"
+                  >
+                    {col.label}
+                  </label>
+                </div>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -319,139 +411,188 @@ export default function SitesPage() {
       )}
 
       {/* Modern Table Container */}
-      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm overflow-auto">
-        <Table className="border-separate border-spacing-0 min-w-[1200px]">
-          <TableHeader className="bg-white">
-            <TableRow>
-              <TableHead className="w-[50px] bg-white sticky top-0 z-10 shadow-sm border-b">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                />
-              </TableHead>
-              <TableHead className="w-[100px] bg-white text-zinc-900 font-bold uppercase text-[11px] tracking-wider sticky top-0 z-20 shadow-sm border-b">
-                Radius (m)
-              </TableHead>
-              <TableHead className="w-[60px] bg-white text-zinc-900 font-bold uppercase text-[11px] tracking-wider sticky top-0 z-10 shadow-sm border-b">
-                Icon
-              </TableHead>
-              <SortableHeader label="Site Code" sortKey="site_code" />
-              <SortableHeader label="Site Name" sortKey="name" />
-              <SortableHeader label="Address" sortKey="address" />
-              <SortableHeader label="City" sortKey="city" />
-              <SortableHeader label="State" sortKey="state" />
-              <TableHead className="bg-white text-zinc-900 font-bold uppercase text-[11px] tracking-wider sticky top-0 z-10 shadow-sm border-b whitespace-nowrap">
-                Coordinates
-              </TableHead>
-              <SortableHeader label="Status" sortKey="is_active" />
-              <TableHead className="text-right bg-white text-zinc-900 font-bold uppercase text-[11px] tracking-wider sticky top-0 z-10 shadow-sm border-b">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {loading ? (
-              <TableSkeleton columnCount={11} rowCount={10} />
-            ) : filteredSites.length === 0 ? (
+      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-auto">
+          <Table className="border-separate border-spacing-0 min-w-[1200px]">
+            <TableHeader className="bg-zinc-50 sticky top-0 z-30">
               <TableRow>
-                <TableCell
-                  colSpan={10}
-                  className="text-center py-20 text-muted-foreground"
-                >
-                  No sites found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredSites.map((site) => (
-                <TableRow
-                  key={site.site_id}
-                  className={selectedIds.has(site.site_id) ? "bg-red-50" : ""}
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.has(site.site_id)}
-                      onCheckedChange={(checked) =>
-                        handleSelectOne(site.site_id, !!checked)
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {site.radius || 500}m
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center">
-                      <Building2 className="h-4 w-4 text-zinc-500" />
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {site.site_code || "-"}
-                  </TableCell>
-                  <TableCell className="font-medium">{site.name}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">
-                    {site.address || "-"}
-                  </TableCell>
-                  <TableCell>{site.city || "-"}</TableCell>
-                  <TableCell>{site.state || "-"}</TableCell>
-                  <TableCell>
-                    {site.latitude && site.longitude ? (
-                      <a
-                        href={`https://www.google.com/maps?q=${site.latitude},${site.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-blue-600 hover:underline text-sm"
-                      >
-                        <MapPin className="h-3 w-3" />
-                        {Number(site.latitude).toFixed(4)},{" "}
-                        {Number(site.longitude).toFixed(4)}
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">
-                        Not set
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        site.is_active !== false
-                          ? "text-green-600 border-green-200 bg-green-50"
-                          : "text-red-600 border-red-200 bg-red-50"
-                      }
+                <TableHead className="w-[50px] bg-zinc-50/80 backdrop-blur sticky top-0 left-0 z-40 shadow-sm border-b px-4 text-center">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                  />
+                </TableHead>
+                {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map(
+                  (col) => (
+                    <TableHead
+                      key={col.key}
+                      className="bg-zinc-50 sticky top-0 z-20 shadow-sm border-b"
                     >
-                      {site.is_active !== false ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setCurrentSite(site);
-                          setIsEditOpen(true);
-                        }}
+                      <button
+                        className="flex items-center gap-1 hover:text-red-600 transition-colors uppercase text-[10px] font-bold tracking-wider text-zinc-900 whitespace-nowrap"
+                        onClick={() => handleSort(col.key)}
                       >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-600"
-                        onClick={() => handleDelete(site.site_id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                        {col.label}
+                        {sortConfig?.key === col.key ? (
+                          sortConfig.direction === "asc" ? (
+                            <ArrowUp className="h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="h-3 w-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 opacity-30" />
+                        )}
+                      </button>
+                    </TableHead>
+                  ),
+                )}
+                <TableHead className="text-right bg-zinc-50 text-zinc-900 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-30 shadow-sm border-b border-l px-6">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {loading ? (
+                <TableSkeleton columnCount={11} rowCount={10} />
+              ) : filteredSites.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={10}
+                    className="text-center py-20 text-muted-foreground"
+                  >
+                    No sites found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredSites.map((site) => (
+                  <TableRow
+                    key={site.site_id}
+                    className={cn(
+                      "hover:bg-zinc-50/50 transition-colors group",
+                      selectedIds.has(site.site_id) && "bg-red-50/30",
+                    )}
+                  >
+                    <TableCell className="px-4 sticky left-0 z-10 bg-white group-hover:bg-zinc-50 transition-colors border-r border-zinc-100 text-center">
+                      <Checkbox
+                        checked={selectedIds.has(site.site_id)}
+                        onCheckedChange={(checked) =>
+                          handleSelectOne(site.site_id, !!checked)
+                        }
+                      />
+                    </TableCell>
+                    {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map(
+                      (col) => (
+                        <TableCell key={col.key}>
+                          {col.key === "status" ? (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] font-bold uppercase px-2 shadow-none border-none",
+                                site.status === "Active" ||
+                                  site.is_active !== false
+                                  ? "text-green-600 bg-green-50"
+                                  : "text-red-600 bg-red-50",
+                              )}
+                            >
+                              {site.status ||
+                                (site.is_active !== false
+                                  ? "Active"
+                                  : "Inactive")}
+                            </Badge>
+                          ) : col.key === "is_active" ? (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] font-bold uppercase px-2 shadow-none border-none",
+                                site.is_active !== false
+                                  ? "text-green-600 bg-green-50"
+                                  : "text-red-600 bg-red-50",
+                              )}
+                            >
+                              {site.is_active !== false ? "Active" : "Inactive"}
+                            </Badge>
+                          ) : col.key === "name" ? (
+                            <div className="flex items-center gap-2 font-bold text-zinc-900 whitespace-nowrap">
+                              {site.name}
+                            </div>
+                          ) : col.key === "site_code" ? (
+                            <span className="font-mono text-[11px] font-bold text-zinc-400 whitespace-nowrap">
+                              {site[col.key] || "N/A"}
+                            </span>
+                          ) : col.key === "radius" ? (
+                            <Badge
+                              variant="outline"
+                              className="font-mono text-xs whitespace-nowrap"
+                            >
+                              {site[col.key] || 500}m
+                            </Badge>
+                          ) : col.key === "latitude" ||
+                            col.key === "longitude" ? (
+                            <span className="text-xs text-zinc-500 font-medium whitespace-nowrap">
+                              {site[col.key]
+                                ? Number(site[col.key]).toFixed(4)
+                                : "-"}
+                            </span>
+                          ) : col.key === "location" ? (
+                            site.latitude && site.longitude ? (
+                              <a
+                                href={`https://www.google.com/maps?q=${site.latitude},${site.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-blue-600 hover:underline text-xs whitespace-nowrap"
+                              >
+                                <MapPin className="h-3 w-3" /> View Map
+                              </a>
+                            ) : (
+                              "-"
+                            )
+                          ) : col.key.includes("created_at") ||
+                            col.key.includes("updated_at") ? (
+                            <span className="text-xs text-zinc-500 font-medium whitespace-nowrap">
+                              {site[col.key]
+                                ? format(
+                                    new Date(site[col.key]),
+                                    "MMM dd, yyyy",
+                                  )
+                                : "-"}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-zinc-600 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] block">
+                              {site[col.key] || "-"}
+                            </span>
+                          )}
+                        </TableCell>
+                      ),
+                    )}
+                    <TableCell className="text-right sticky right-0 bg-white group-hover:bg-zinc-50 shadow-[-10px_0_15px_rgba(0,0,0,0.02)] transition-colors px-6">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setCurrentSite(site);
+                            setIsEditOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-600"
+                          onClick={() => handleDelete(site.site_id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
@@ -561,7 +702,14 @@ function SiteForm({ site, onSave }: { site?: any; onSave: () => void }) {
       longitude: "",
       is_active: true,
       radius: 500,
-    }
+      project_type: "",
+      client: "",
+      site_contact_number: "",
+      seo: "",
+      rem: "",
+      status: "Active",
+      task_executor: "",
+    },
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -572,6 +720,33 @@ function SiteForm({ site, onSave }: { site?: any; onSave: () => void }) {
       ...prev,
       [id]: type === "checkbox" ? checked : value,
     }));
+  };
+
+  const [whatsappGroupId, setWhatsappGroupId] = useState("");
+  const [initialMapping, setInitialMapping] = useState<any>(null);
+
+  useEffect(() => {
+    if (site) {
+      fetchSiteMapping();
+    }
+  }, [site]);
+
+  const fetchSiteMapping = async () => {
+    try {
+      const res = await apiFetch("/api/whatsapp/mappings");
+      const result = await safeJsonParse(res);
+      if (result.success) {
+        const mapping = result.data.find(
+          (m: any) => m.site_id === site.site_id,
+        );
+        if (mapping) {
+          setWhatsappGroupId(mapping.whatsapp_group_id || "");
+          setInitialMapping(mapping);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch mapping", e);
+    }
   };
 
   const handleMapSelect = (lat: number, lng: number, radius: number) => {
@@ -596,6 +771,28 @@ function SiteForm({ site, onSave }: { site?: any; onSave: () => void }) {
       });
 
       if (res.ok) {
+        // Save WhatsApp Mapping if changed
+        const savedSite = site || (await safeJsonParse(res)).data;
+        const targetSiteId = site ? site.site_id : savedSite.site_id;
+
+        if (whatsappGroupId !== (initialMapping?.whatsapp_group_id || "")) {
+          const mappingData = {
+            site_id: targetSiteId,
+            site_name: formData.name,
+            whatsapp_group_id: whatsappGroupId,
+            is_active: true,
+          };
+
+          const mappingPath = initialMapping
+            ? `/api/whatsapp/mappings/${initialMapping.id}`
+            : "/api/whatsapp/mappings";
+
+          await apiFetch(mappingPath, {
+            method: initialMapping ? "PUT" : "POST",
+            body: JSON.stringify(mappingData),
+          });
+        }
+
         onSave();
       } else {
         const result = await safeJsonParse(res);
@@ -737,24 +934,130 @@ function SiteForm({ site, onSave }: { site?: any; onSave: () => void }) {
         )}
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="radius" className="text-sm font-medium text-zinc-700">
-          Geofence Radius (100-1000m)
+      <div className="space-y-2 border-t pt-4">
+        <label
+          htmlFor="whatsapp_group_id"
+          className="text-sm font-bold text-zinc-900 flex items-center gap-2"
+        >
+          <MessageSquare className="w-4 h-4 text-red-600" />
+          WhatsApp Group ID
         </label>
         <Input
-          id="radius"
-          type="number"
-          min="100"
-          max="1000"
-          value={formData.radius}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              radius: parseInt(e.target.value) || 100,
-            })
-          }
-          className="bg-white border-zinc-200"
+          id="whatsapp_group_id"
+          value={whatsappGroupId}
+          onChange={(e) => setWhatsappGroupId(e.target.value)}
+          placeholder="e.g. 12036304xxxxxxxxxx@g.us"
+          className="bg-zinc-50 border-zinc-200"
         />
+        <p className="text-[10px] text-zinc-500 font-medium flex items-center gap-1 uppercase tracking-tight">
+          <AlertCircle className="w-3 h-3" /> Notifications will be sent to this
+          group when ticket status changes.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 border-t pt-4">
+        <div className="grid gap-2">
+          <label
+            htmlFor="project_type"
+            className="text-sm font-medium text-zinc-700"
+          >
+            Project Type
+          </label>
+          <Input
+            id="project_type"
+            value={formData.project_type || ""}
+            onChange={handleChange}
+            placeholder="e.g. JoulePura"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label htmlFor="client" className="text-sm font-medium text-zinc-700">
+            Client Name
+          </label>
+          <Input
+            id="client"
+            value={formData.client || ""}
+            onChange={handleChange}
+            placeholder="e.g. Apollo Hospitals"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label
+            htmlFor="site_contact_number"
+            className="text-sm font-medium text-zinc-700"
+          >
+            Site Contact
+          </label>
+          <Input
+            id="site_contact_number"
+            value={formData.site_contact_number || ""}
+            onChange={handleChange}
+            placeholder="+91 ..."
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label
+            htmlFor="task_executor"
+            className="text-sm font-medium text-zinc-700"
+          >
+            Task Executor
+          </label>
+          <Input
+            id="task_executor"
+            value={formData.task_executor || ""}
+            onChange={handleChange}
+            placeholder="Executor Name"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label htmlFor="seo" className="text-sm font-medium text-zinc-700">
+            SEO
+          </label>
+          <Input
+            id="seo"
+            value={formData.seo || ""}
+            onChange={handleChange}
+            placeholder="SEO Name"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label htmlFor="rem" className="text-sm font-medium text-zinc-700">
+            REM
+          </label>
+          <Input
+            id="rem"
+            value={formData.rem || ""}
+            onChange={handleChange}
+            placeholder="REM Name"
+            className="bg-white border-zinc-200"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label htmlFor="status" className="text-sm font-medium text-zinc-700">
+            Operational Status
+          </label>
+          <Select
+            value={formData.status || "Active"}
+            onValueChange={(val) => setFormData({ ...formData, status: val })}
+          >
+            <SelectTrigger className="w-full bg-white border-zinc-200">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Inactive">Inactive</SelectItem>
+              <SelectItem value="Under Maintenance">
+                Under Maintenance
+              </SelectItem>
+              <SelectItem value="Proposed">Proposed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 pt-2">
@@ -762,7 +1065,11 @@ function SiteForm({ site, onSave }: { site?: any; onSave: () => void }) {
           id="is_active"
           checked={formData.is_active !== false}
           onCheckedChange={(checked) =>
-            setFormData((prev: any) => ({ ...prev, is_active: !!checked }))
+            setFormData((prev: any) => ({
+              ...prev,
+              is_active: !!checked,
+              status: checked ? "Active" : "Inactive",
+            }))
           }
         />
         <label

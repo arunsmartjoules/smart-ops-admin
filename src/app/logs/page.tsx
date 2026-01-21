@@ -111,7 +111,7 @@ export default function LogsPage() {
       const res = await apiFetch(
         `/api/logs?page=${page}&limit=${pagination.limit}${
           search ? `&search=${encodeURIComponent(search)}` : ""
-        }${fromStr ? `&from=${fromStr}` : ""}${toStr ? `&to=${toStr}` : ""}`
+        }${fromStr ? `&from=${fromStr}` : ""}${toStr ? `&to=${toStr}` : ""}`,
       );
 
       // Safe JSON parsing
@@ -133,8 +133,11 @@ export default function LogsPage() {
           }));
         }
       } else {
-        setError(result.error || "Failed to fetch logs");
-        console.error("API error:", result.error);
+        // Don't log or show error if it's a token expiration - auth context handles it
+        if (result.error !== "Token expired") {
+          setError(result.error || "Failed to fetch logs");
+          console.error("API error:", result.error);
+        }
       }
     } catch (error: any) {
       setError(error.message || "Failed to fetch logs");
@@ -166,7 +169,7 @@ export default function LogsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full space-y-4 p-4 sm:p-6 pb-2">
       <div className="flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
@@ -232,7 +235,7 @@ export default function LogsPage() {
                 variant="outline"
                 className={cn(
                   "bg-zinc-50 border-zinc-200 font-bold text-xs uppercase tracking-tight h-10 px-4",
-                  !dateFrom && "text-zinc-400"
+                  !dateFrom && "text-zinc-400",
                 )}
               >
                 <CalendarIcon className="mr-2 h-3.5 w-3.5" />
@@ -255,7 +258,7 @@ export default function LogsPage() {
                 variant="outline"
                 className={cn(
                   "bg-zinc-50 border-zinc-200 font-bold text-xs uppercase tracking-tight h-10 px-4",
-                  !dateTo && "text-zinc-400"
+                  !dateTo && "text-zinc-400",
                 )}
               >
                 <CalendarIcon className="mr-2 h-3.5 w-3.5" />
@@ -296,13 +299,13 @@ export default function LogsPage() {
               "font-bold text-[10px] uppercase tracking-widest h-10 px-4 transition-all",
               autoRefresh
                 ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 shadow-sm"
-                : "bg-zinc-50 text-zinc-400 border-zinc-200"
+                : "bg-zinc-50 text-zinc-400 border-zinc-200",
             )}
           >
             <RefreshCcw
               className={cn(
                 "mr-2 h-3.5 w-3.5",
-                autoRefresh && "animate-spin-slow"
+                autoRefresh && "animate-spin-slow",
               )}
             />
             {autoRefresh ? "Auto-Refresh ON" : "Auto-Refresh OFF"}
@@ -318,7 +321,7 @@ export default function LogsPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 border border-zinc-200 rounded-xl bg-white shadow-sm overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
           <Table className="border-separate border-spacing-0">
             <TableHeader className="bg-zinc-50 sticky top-0 z-20">
@@ -438,7 +441,7 @@ export default function LogsPage() {
                         variant="outline"
                         className={cn(
                           "text-[10px] font-bold uppercase px-2 shadow-none border-none",
-                          getActionColor(log.action)
+                          getActionColor(log.action),
                         )}
                       >
                         {log.action}
@@ -507,7 +510,7 @@ export default function LogsPage() {
                                   <Badge
                                     className={cn(
                                       "text-[9px] font-black uppercase shadow-none border-none",
-                                      getActionColor(log.action)
+                                      getActionColor(log.action),
                                     )}
                                   >
                                     {log.action}

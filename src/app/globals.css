@@ -47,72 +47,38 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.99 0.005 240);
+  --foreground: oklch(0.15 0.02 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.15 0.02 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.25 25);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.25 25);
-  --radius: 0.625rem;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.55 0.25 25);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.55 0.25 25);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.55 0.25 25);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.55 0.25 25);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --popover-foreground: oklch(0.15 0.02 240);
+  --primary: oklch(0.6 0.22 25); /* Vibrant Red */
+  --primary-foreground: oklch(0.99 0.005 240);
+  --secondary: oklch(0.96 0.01 240);
+  --secondary-foreground: oklch(0.2 0.02 240);
+  --muted: oklch(0.96 0.01 240);
+  --muted-foreground: oklch(0.45 0.02 240);
+  --accent: oklch(0.96 0.01 240);
+  --accent-foreground: oklch(0.2 0.02 240);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.92 0.01 240);
+  --input: oklch(0.92 0.01 240);
+  --ring: oklch(0.6 0.22 25);
+  --radius: 0.75rem;
+  --chart-1: oklch(0.6 0.22 25);
+  --chart-2: oklch(0.6 0.15 200);
+  --chart-3: oklch(0.45 0.1 240);
+  --chart-4: oklch(0.75 0.18 80);
+  --chart-5: oklch(0.7 0.18 40);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.15 0.02 240);
+  --sidebar-primary: oklch(0.6 0.22 25);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.01 240);
+  --sidebar-accent-foreground: oklch(0.15 0.02 240);
+  --sidebar-border: oklch(0.92 0.01 240);
+  --sidebar-ring: oklch(0.6 0.22 25);
 }
 
 @layer base {
@@ -120,43 +86,72 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground selection:bg-red-100 selection:text-red-900;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
-/* Modern Table Enhancements */
 @layer components {
-  /* Enhanced table rows with subtle hover */
-  table tbody tr {
-    @apply transition-colors duration-150;
+  /* Glassmorphism Classes */
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl;
   }
 
-  table tbody tr:hover {
-    @apply bg-zinc-50;
+  .glass-dark {
+    @apply bg-zinc-900/70 backdrop-blur-xl border border-white/10 shadow-xl;
   }
 
-  /* Modern table headers */
-  table thead th {
-    @apply font-semibold text-zinc-700 bg-zinc-50/80 border-b-2 border-zinc-200;
+  /* Premium Card Styles */
+  .premium-card {
+    @apply bg-white rounded-2xl border border-zinc-200/60 shadow-sm transition-all duration-300 hover:shadow-md hover:border-zinc-300/60;
   }
 
-  /* Subtle borders for table cells */
-  table td {
-    @apply border-b border-zinc-100;
+  /* Table Enhancements */
+  .modern-table {
+    @apply w-full border-separate border-spacing-0;
   }
 
-  /* Last row no border */
-  table tbody tr:last-child td {
+  .modern-table thead th {
+    @apply h-11 px-4 text-left align-middle font-bold uppercase text-[10px] tracking-wider text-zinc-500 bg-zinc-50/50 border-b border-zinc-200/60 first:rounded-tl-xl last:rounded-tr-xl;
+  }
+
+  .modern-table tbody td {
+    @apply p-4 align-middle border-b border-zinc-100/80 text-sm transition-colors;
+  }
+
+  .modern-table tbody tr:hover td {
+    @apply bg-red-50/30;
+  }
+
+  .modern-table tbody tr:last-child td {
     @apply border-b-0;
   }
 
-  /* Badge enhancements for status indicators */
-  .status-badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  /* Dashboard Grid Cards */
+  .stat-card {
+    @apply relative overflow-hidden rounded-2xl p-6 bg-white border border-zinc-200/60 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1;
   }
 
-  /* Action buttons in tables */
-  .table-action-btn {
-    @apply h-8 w-8 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-sm;
+  .stat-card-icon {
+    @apply absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity;
   }
+
+  /* Button Premium Effects */
+  .btn-premium {
+    @apply relative overflow-hidden transition-all active:scale-95 shadow-lg shadow-red-600/10 hover:shadow-red-600/20;
+  }
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-300 rounded-full hover:bg-zinc-400 transition-colors;
 }

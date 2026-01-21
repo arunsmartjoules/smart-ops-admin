@@ -8,6 +8,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LogOut, User, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CommandPalette } from "@/components/command-palette";
+
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <LayoutContent>{children}</LayoutContent>
         </AuthProvider>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
@@ -86,6 +90,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center gap-3">
+              <CommandPalette />
               <div className="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-zinc-200 bg-zinc-50 text-xs font-medium text-zinc-700">
                 <div className="flex h-6 w-6 items-center justify-center rounded bg-red-600">
                   <User className="h-3 w-3 text-white" />
@@ -111,8 +116,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 overflow-hidden p-4 sm:p-6 bg-zinc-50">
-            <div className="h-full">{children}</div>
+          <main className="flex-1 flex flex-col min-h-0 bg-zinc-50 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0">{children}</div>
           </main>
         </div>
       </div>

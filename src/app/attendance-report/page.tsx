@@ -48,7 +48,7 @@ export default function AttendanceReportPage() {
   // Filters
   const [siteId, setSiteId] = useState("all");
   const [dateFrom, setDateFrom] = useState<Date>(
-    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
   );
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [searchTerm, setSearchTerm] = useState("");
@@ -79,7 +79,7 @@ export default function AttendanceReportPage() {
         site_id: siteId,
       });
       const res = await apiFetch(
-        `/api/attendance/overall-report?${params.toString()}`
+        `/api/attendance/overall-report?${params.toString()}`,
       );
       const result = await safeJsonParse(res);
       if (result.success) {
@@ -136,7 +136,7 @@ export default function AttendanceReportPage() {
           log.remarks,
         ]
           .map((v) => `"${v || ""}"`)
-          .join(",")
+          .join(","),
       ),
     ].join("\n");
 
@@ -148,8 +148,8 @@ export default function AttendanceReportPage() {
       "download",
       `attendance_report_${format(dateFrom, "yyyy-MM-dd")}_to_${format(
         dateTo,
-        "yyyy-MM-dd"
-      )}.csv`
+        "yyyy-MM-dd",
+      )}.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
@@ -163,7 +163,7 @@ export default function AttendanceReportPage() {
       log.users?.employee_code
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      log.sites?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      log.sites?.name?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const getStatusColor = (status: string) => {
@@ -186,7 +186,7 @@ export default function AttendanceReportPage() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full space-y-4 p-4 sm:p-6 pb-2">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
@@ -239,7 +239,7 @@ export default function AttendanceReportPage() {
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal bg-white border-zinc-200",
-                      !dateFrom && "text-muted-foreground"
+                      !dateFrom && "text-muted-foreground",
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -271,7 +271,7 @@ export default function AttendanceReportPage() {
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal bg-white border-zinc-200",
-                      !dateTo && "text-muted-foreground"
+                      !dateTo && "text-muted-foreground",
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -319,7 +319,7 @@ export default function AttendanceReportPage() {
       </Card>
 
       {/* Report Table */}
-      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
           <Table>
             <TableHeader className="bg-zinc-50 sticky top-0 z-10">
@@ -389,7 +389,7 @@ export default function AttendanceReportPage() {
                           {log.check_in_time
                             ? new Date(log.check_in_time).toLocaleTimeString(
                                 [],
-                                { hour: "2-digit", minute: "2-digit" }
+                                { hour: "2-digit", minute: "2-digit" },
                               )
                             : "-"}
                         </div>
@@ -398,7 +398,7 @@ export default function AttendanceReportPage() {
                             onClick={() =>
                               openInGoogleMaps(
                                 log.check_in_latitude,
-                                log.check_in_longitude
+                                log.check_in_longitude,
                               )
                             }
                             className="flex items-center gap-1 text-[10px] text-red-600 hover:text-red-700 font-bold uppercase tracking-tight"
@@ -415,7 +415,7 @@ export default function AttendanceReportPage() {
                           {log.check_out_time
                             ? new Date(log.check_out_time).toLocaleTimeString(
                                 [],
-                                { hour: "2-digit", minute: "2-digit" }
+                                { hour: "2-digit", minute: "2-digit" },
                               )
                             : "-"}
                         </div>
@@ -424,7 +424,7 @@ export default function AttendanceReportPage() {
                             onClick={() =>
                               openInGoogleMaps(
                                 log.check_out_latitude,
-                                log.check_out_longitude
+                                log.check_out_longitude,
                               )
                             }
                             className="flex items-center gap-1 text-[10px] text-red-600 hover:text-red-700 font-bold uppercase tracking-tight"
@@ -438,7 +438,7 @@ export default function AttendanceReportPage() {
                       <Badge
                         variant="outline"
                         className={`text-[10px] px-2 py-0 h-5 font-bold uppercase tracking-wider ${getStatusColor(
-                          log.status
+                          log.status,
                         )}`}
                       >
                         {log.status}
