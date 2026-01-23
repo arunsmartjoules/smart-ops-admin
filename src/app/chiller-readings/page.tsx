@@ -99,11 +99,11 @@ const ALL_COLUMNS = [
   { key: "compressor_load_percent", label: "Load (%)", default: true },
   { key: "inline_btu_meter", label: "BTU Meter", default: false },
   { key: "set_point", label: "Set Point", default: false },
-  { key: "sla_status", label: "SLA Status", default: false },
-  { key: "executor_id", label: "Executor", default: false },
+  { key: "sla_status", label: "SLA Status", default: true },
+  { key: "executor_id", label: "Executor", default: true },
   { key: "reviewed_by", label: "Reviewed By", default: false },
-  { key: "remarks", label: "Remarks", default: false },
-  { key: "created_at", label: "Created At", default: false },
+  { key: "remarks", label: "Remarks", default: true },
+  { key: "created_at", label: "Created At", default: true },
 ];
 
 export default function ChillerReadingsPage() {

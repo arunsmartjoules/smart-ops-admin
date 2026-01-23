@@ -1,9 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,6 +7,8 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  AreaChart,
+  Area,
   PieChart,
   Pie,
   Cell,
@@ -18,86 +16,92 @@ import {
 
 interface ChartsSectionProps {
   loading?: boolean;
-  errorTrends?: any[];
+  ticketsByDay?: { date: string; tickets: number; checkIns: number }[];
+  ticketsByCategory?: { name: string; value: number; color: string }[];
 }
 
-// Mock Data
-const ticketTrend = [
-  { date: "Mon", open: 12, resolved: 8 },
-  { date: "Tue", open: 15, resolved: 10 },
-  { date: "Wed", open: 18, resolved: 15 },
-  { date: "Thu", open: 14, resolved: 18 },
-  { date: "Fri", open: 20, resolved: 12 },
-  { date: "Sat", open: 8, resolved: 6 },
-  { date: "Sun", open: 5, resolved: 4 },
+// Fallback mock data
+const defaultTicketsByDay = [
+  { date: "Jan 1", tickets: 5, checkIns: 12 },
+  { date: "Jan 2", tickets: 8, checkIns: 15 },
+  { date: "Jan 3", tickets: 12, checkIns: 18 },
+  { date: "Jan 4", tickets: 6, checkIns: 14 },
+  { date: "Jan 5", tickets: 10, checkIns: 20 },
+  { date: "Jan 6", tickets: 4, checkIns: 8 },
+  { date: "Jan 7", tickets: 3, checkIns: 6 },
 ];
 
-const efficiencyData = [
-  { time: "00:00", cop: 3.2 },
-  { time: "04:00", cop: 3.1 },
-  { time: "08:00", cop: 3.5 },
-  { time: "12:00", cop: 3.8 },
-  { time: "16:00", cop: 3.9 },
-  { time: "20:00", cop: 3.4 },
+const defaultTicketsByCategory = [
+  { name: "HVAC", value: 35, color: "#3b82f6" },
+  { name: "Electrical", value: 25, color: "#f59e0b" },
+  { name: "Plumbing", value: 15, color: "#10b981" },
+  { name: "IT", value: 12, color: "#8b5cf6" },
+  { name: "Other", value: 13, color: "#6b7280" },
 ];
 
-const alertDistribution = [
-  { name: "Critical", value: 5, color: "#ef4444" },
-  { name: "Warning", value: 12, color: "#f59e0b" },
-  { name: "Info", value: 25, color: "#3b82f6" },
+const CATEGORY_COLORS = [
+  "#3b82f6", // Blue
+  "#10b981", // Emerald
+  "#f59e0b", // Amber
+  "#8b5cf6", // Violet
+  "#ec4899", // Rose
+  "#06b6d4", // Cyan
+  "#f43f5e", // Red
+  "#6b7280", // Gray
 ];
 
 export function ChartsSection({
   loading,
-  errorTrends = [],
+  ticketsByDay = defaultTicketsByDay,
+  ticketsByCategory = defaultTicketsByCategory,
 }: ChartsSectionProps) {
   if (loading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <div className="col-span-full h-[400px] bg-zinc-100 rounded-xl animate-pulse mb-2" />
         <div className="col-span-4 h-[350px] bg-zinc-100 rounded-xl animate-pulse" />
         <div className="col-span-3 h-[350px] bg-zinc-100 rounded-xl animate-pulse" />
+        <div className="col-span-7 h-[300px] bg-zinc-100 rounded-xl animate-pulse" />
       </div>
     );
   }
 
+  // Assign colors to categories if not present or override for consistency
+  const colorfulCategories = ticketsByCategory.map((item, index) => ({
+    ...item,
+    color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+  }));
+
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-      {/* System Error Trend Chart */}
-      <Card className="col-span-full border-zinc-100/80 bg-white shadow-sm overflow-hidden group">
-        <CardHeader className="flex flex-row items-center justify-between">
+      {/* 1. Ticket Volume Chart (Bar) - 4/7 width */}
+      <Card className="col-span-full lg:col-span-4 border-zinc-100/80 bg-white shadow-sm overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
-            <CardTitle className="text-lg font-bold text-zinc-900">
-              System Error Dynamics
+            <CardTitle className="text-base font-bold text-zinc-900">
+              Ticket Volume
             </CardTitle>
             <p className="text-xs text-zinc-500 mt-1">
-              Day-wise distribution of non-critical and critical system errors
-              across all modules.
+              Daily tickets raised over current month
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 rounded-full border border-red-100">
-              <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-              <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider">
-                Live tracking
-              </span>
-            </div>
-          </div>
         </CardHeader>
-        <CardContent className="pl-2 pb-6">
-          <div className="h-[320px]">
+        <CardContent className="pl-0 pb-4">
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={errorTrends}>
+              <BarChart
+                data={ticketsByDay}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient
-                    id="errorGradient"
+                    id="ticketGradient"
                     x1="0"
                     y1="0"
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8} />
-                    <stop offset="100%" stopColor="#991b1b" stopOpacity={0.9} />
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -107,49 +111,48 @@ export function ChartsSection({
                 />
                 <XAxis
                   dataKey="date"
-                  stroke="#71717a"
-                  fontSize={10}
+                  stroke="#a1a1aa"
+                  fontSize={11}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(val) => {
-                    const date = new Date(val);
-                    return date.toLocaleDateString("en-US", {
-                      day: "numeric",
-                      month: "short",
-                    });
-                  }}
+                  tickMargin={10}
                 />
                 <YAxis
-                  stroke="#71717a"
-                  fontSize={10}
+                  stroke="#a1a1aa"
+                  fontSize={11}
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
+                  tickMargin={10}
                 />
                 <Tooltip
-                  cursor={{ fill: "#f4f4f5" }}
+                  cursor={{ fill: "#f4f4f5", opacity: 0.4 }}
                   contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "12px",
-                    border: "1px solid #e4e4e7",
-                    boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                    padding: "12px",
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow:
+                      "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                    padding: "8px 12px",
                   }}
-                  itemStyle={{ fontSize: "12px", fontWeight: "bold" }}
+                  itemStyle={{
+                    fontSize: "12px",
+                    fontWeight: "500",
+                    color: "#3b82f6",
+                  }}
                   labelStyle={{
-                    fontSize: "10px",
+                    fontSize: "11px",
                     color: "#71717a",
                     marginBottom: "4px",
-                    textTransform: "uppercase",
-                    fontWeight: "black",
+                    fontWeight: "600",
                   }}
                 />
                 <Bar
-                  dataKey="errors"
-                  fill="url(#errorGradient)"
-                  radius={[6, 6, 0, 0]}
-                  barSize={40}
-                  name="System Errors"
+                  dataKey="tickets"
+                  fill="url(#ticketGradient)"
+                  radius={[4, 4, 0, 0]}
+                  barSize={24}
+                  name="Tickets"
                   animationDuration={1500}
                 />
               </BarChart>
@@ -157,31 +160,99 @@ export function ChartsSection({
           </div>
         </CardContent>
       </Card>
-      {/* Main Ticket Trend Chart */}
-      <Card className="col-span-4 border-zinc-100/80 bg-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-zinc-900">
-            Ticket Resolution Trend
+
+      {/* 2. Ticket Categories (Pie) - 3/7 width */}
+      <Card className="col-span-full lg:col-span-3 border-zinc-100/80 bg-white shadow-sm overflow-hidden flex flex-col">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-bold text-zinc-900">
+            Categories
           </CardTitle>
+          <p className="text-xs text-zinc-500">
+            Distribution by equipment type
+          </p>
         </CardHeader>
-        <CardContent className="pl-2">
-          <div className="h-[300px]">
+        <CardContent className="flex-1 flex flex-col justify-center pb-6">
+          <div className="h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={ticketTrend}>
+              <PieChart>
+                <Pie
+                  data={colorfulCategories}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={75}
+                  paddingAngle={2}
+                  dataKey="value"
+                  strokeWidth={2}
+                  stroke="#fff"
+                >
+                  {colorfulCategories.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.color}
+                      stroke="rgba(255,255,255,0.2)"
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    padding: "8px 12px",
+                  }}
+                  itemStyle={{ fontSize: "12px", fontWeight: "600" }}
+                  formatter={(value: any, name: any, props: any) => [
+                    value,
+                    props.payload.name,
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 justify-center px-4">
+            {colorfulCategories.slice(0, 6).map((item) => (
+              <div key={item.name} className="flex items-center gap-1.5">
+                <div
+                  className="w-2 h-2 rounded-full shadow-sm"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-[11px] font-medium text-zinc-600">
+                  {item.name}
+                  <span className="text-zinc-400 ml-1">({item.value})</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 3. Check-in Activity (Area) - Full Width */}
+      <Card className="col-span-full border-zinc-100/80 bg-white shadow-sm overflow-hidden">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-bold text-zinc-900">
+            Staff Check-ins
+          </CardTitle>
+          <p className="text-xs text-zinc-500">Daily attendance activity</p>
+        </CardHeader>
+        <CardContent className="pl-0 pb-4">
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={ticketsByDay}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
                 <defs>
-                  <linearGradient id="colorOpen" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
                   <linearGradient
-                    id="colorResolved"
+                    id="checkInGradient"
                     x1="0"
                     y1="0"
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -191,126 +262,56 @@ export function ChartsSection({
                 />
                 <XAxis
                   dataKey="date"
-                  stroke="#71717a"
-                  fontSize={12}
+                  stroke="#a1a1aa"
+                  fontSize={11}
                   tickLine={false}
                   axisLine={false}
+                  tickMargin={10}
                 />
                 <YAxis
-                  stroke="#71717a"
-                  fontSize={12}
+                  stroke="#a1a1aa"
+                  fontSize={11}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `${value}`}
+                  allowDecimals={false}
+                  tickMargin={10}
                 />
                 <Tooltip
+                  cursor={{ stroke: "#10b981", strokeWidth: 1 }}
                   contentStyle={{
-                    backgroundColor: "#fff",
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
                     borderRadius: "8px",
-                    border: "1px solid #e4e4e7",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    padding: "8px 12px",
                   }}
-                  itemStyle={{ fontSize: "12px" }}
+                  itemStyle={{
+                    fontSize: "12px",
+                    fontWeight: "500",
+                    color: "#059669",
+                  }}
+                  labelStyle={{
+                    fontSize: "11px",
+                    color: "#71717a",
+                    marginBottom: "4px",
+                    fontWeight: "600",
+                  }}
                 />
                 <Area
                   type="monotone"
-                  dataKey="open"
-                  stroke="#ef4444"
+                  dataKey="checkIns"
+                  stroke="#10b981"
                   strokeWidth={2}
                   fillOpacity={1}
-                  fill="url(#colorOpen)"
-                  name="Open Tickets"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="resolved"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorResolved)"
-                  name="Resolved"
+                  fill="url(#checkInGradient)"
+                  name="Check-ins"
+                  animationDuration={1500}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
-
-      {/* Alert Distribution (3rd row) */}
-      <Card className="col-span-full lg:col-span-3 border-zinc-100/80 bg-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-zinc-900">
-            Active Alerts by Severity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px] flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={alertDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {alertDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "8px",
-                    border: "1px solid #e4e4e7",
-                  }}
-                  itemStyle={{ fontSize: "12px" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex flex-col gap-2 ml-4">
-              {alertDistribution.map((item) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-sm text-zinc-600">
-                    {item.name}: {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="col-span-full lg:col-span-4 grid grid-cols-2 gap-4">
-        {/* Placeholder for future widgets */}
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-md flex flex-col justify-between">
-          <div>
-            <h3 className="font-bold text-lg mb-1">Weekly Report</h3>
-            <p className="text-white/80 text-sm">
-              Download the latest efficiency report.
-            </p>
-          </div>
-          <button className="bg-white/20 hover:bg-white/30 text-white font-medium py-2 px-4 rounded-lg w-fit text-sm transition-colors mt-4 backdrop-blur-sm">
-            Download PDF
-          </button>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-6 text-white shadow-md flex flex-col justify-between">
-          <div>
-            <h3 className="font-bold text-lg mb-1">System Health</h3>
-            <p className="text-white/80 text-sm">All systems operational.</p>
-          </div>
-          <div className="flex items-center gap-2 mt-4">
-            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-            <span className="text-sm font-medium">99.9% Uptime</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

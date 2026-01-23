@@ -20,6 +20,7 @@ import {
   FileText,
   Loader2,
   Clock,
+  ListFilter,
 } from "lucide-react";
 import { apiFetch, safeJsonParse } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -187,136 +188,165 @@ export default function AttendanceReportPage() {
 
   return (
     <div className="flex flex-col h-full space-y-4 p-4 sm:p-6 pb-2">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
             Attendance Logs
           </h1>
-          <p className="text-zinc-500 mt-1">
+          <p className="text-sm text-zinc-500 mt-1">
             Detailed daily attendance with location verification.
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={exportToCSV}
-          disabled={loading || reportData.length === 0}
-          className="border-zinc-300 hover:bg-zinc-100 transition-all font-medium"
-        >
-          <Download className="mr-2 h-4 w-4" /> Export CSV
-        </Button>
-      </div>
 
-      {/* Filters Area */}
-      <Card className="border-zinc-200 shadow-sm overflow-visible">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
-                <MapPin size={12} /> Select Site
-              </label>
-              <Select value={siteId} onValueChange={setSiteId}>
-                <SelectTrigger className="w-full bg-white border-zinc-200">
-                  <SelectValue placeholder="All Sites" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sites</SelectItem>
-                  {sites.map((site) => (
-                    <SelectItem key={site.site_id} value={site.site_id}>
-                      {site.name} ({site.site_code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-[250px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <Input
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-9 bg-white border-zinc-300"
+            />
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
-                <CalendarIcon size={12} /> From
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal bg-white border-zinc-200",
-                      !dateFrom && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? (
-                      format(dateFrom, "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={(date) => date && setDateFrom(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
-                <CalendarIcon size={12} /> To
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal bg-white border-zinc-200",
-                      !dateTo && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={(date) => date && setDateTo(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="flex gap-2">
+          {/* Filter Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
-                onClick={handleSearch}
-                disabled={loading}
-                className="flex-1 bg-red-600 hover:bg-red-700 shadow-sm"
+                variant="outline"
+                className="h-9 border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-700"
               >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Apply Filters"
+                <ListFilter className="mr-2 h-4 w-4" />
+                Filters
+                {(siteId !== "all" ||
+                  dateFrom.getTime() !==
+                    new Date(
+                      new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
+                    ).setHours(0, 0, 0, 0)) && (
+                  <span className="ml-1.5 flex h-2 w-2 rounded-full bg-blue-600" />
                 )}
               </Button>
-            </div>
-          </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-4" align="end">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm leading-none">Filters</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Refine the attendance report
+                  </p>
+                </div>
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                      Site
+                    </label>
+                    <Select value={siteId} onValueChange={setSiteId}>
+                      <SelectTrigger className="w-full h-9">
+                        <SelectValue placeholder="All Sites" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sites</SelectItem>
+                        {sites.map((site) => (
+                          <SelectItem key={site.site_id} value={site.site_id}>
+                            {site.name} ({site.site_code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-          <div className="mt-4 pt-4 border-t border-zinc-100 flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-              <Input
-                placeholder="Search name, code, or site..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 bg-zinc-50/50 border-zinc-200"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                        From
+                      </label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal h-9",
+                              !dateFrom && "text-muted-foreground",
+                            )}
+                          >
+                            {dateFrom ? (
+                              format(dateFrom, "MMM d")
+                            ) : (
+                              <span>Pick</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={dateFrom}
+                            onSelect={(date) => date && setDateFrom(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                        To
+                      </label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal h-9",
+                              !dateTo && "text-muted-foreground",
+                            )}
+                          >
+                            {dateTo ? (
+                              format(dateTo, "MMM d")
+                            ) : (
+                              <span>Pick</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={dateTo}
+                            onSelect={(date) => date && setDateTo(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleSearch}
+                    disabled={loading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 h-9"
+                  >
+                    {loading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      "Apply Filters"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            variant="outline"
+            onClick={exportToCSV}
+            disabled={loading || reportData.length === 0}
+            className="h-9 border-zinc-300 hover:bg-zinc-100 hidden sm:flex"
+          >
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
+        </div>
+      </div>
 
       {/* Report Table */}
       <div className="flex-1 min-h-0 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col overflow-hidden">
